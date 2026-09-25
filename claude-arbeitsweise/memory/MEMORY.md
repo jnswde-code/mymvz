@@ -1,0 +1,12 @@
+- [Sprache & Commits](feedback_sprache_und_commits.md) — Deutsch antworten, nach Änderungen proaktiv committen
+- [Issue- und PR-Pflicht](feedback_issue_und_pr_pflicht.md) — Issue + PR/MR für jede Änderung; gemergt wird bewusst lokal per git
+- [Issue ist der Prompt](feedback_issue_ist_der_prompt.md) — keinen Extra-Prompt je Issue; Stand ins Issue, „Bearbeite Issue #N“
+- [Nur das Bestellte tun](feedback_nur_das_bestellte_tun.md) — „Issue anlegen“ heißt nur Issue anlegen; Angebote einteilig
+- [/code-review vor jedem Merge](feedback_code_review_vor_merge.md) — Ziel `origin/main...HEAD`; Funde beheben oder im PR begründen
+- [Regel streichen statt Sonderfälle](feedback_regel_streichen_statt_sonderfaelle.md) — erzeugt eine Regel Sonderfälle, die Regel weglassen
+- [Secrets nicht über den Chat](feedback_secrets_nicht_ueber_den_chat.md) — verdeckter read-Befehl in die .env, Neustart getrennt
+- [Session-Hygiene](feedback_session_hygiene.md) — `_closed_`-Präfix + archivieren; Worktree danach prüfen und entfernen
+- [Fable-Hinweis je Anfrage](feedback_fable_hinweis.md) — klarer Fable-Fall auf Opus → eine Zeile + anhalten; Routine auf Fable → „Opus reicht“
+- [Kontingent nicht zu streng](feedback_kontingent_nicht_zu_streng.md) — nur warnen, wenn die Hochrechnung vor dem Reset 100 % reißt
+- [Kennung im Session-Titel](feedback_session_kennung_im_titel.md) — „<Kennung> · #<Issue> <Kurzname>“, immer mit Thema nennen
+- [Bilder vor dem Merge im Chat](feedback_bilder_vor_merge_im_chat.md) — nur bei sichtbarer Änderung, je Seite 1 vorher + 1 nachher
