@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/memory-hinweis.sh",
+            "timeout": 10,
+            "statusMessage": "Memory-Check"
+          }
+        ]
+      }
+    ]
+  }
+}
