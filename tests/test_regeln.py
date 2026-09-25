@@ -33,7 +33,7 @@ _ENDUNGEN = {".py", ".js", ".html", ".css", ".yml", ".yaml", ".sh", ".conf", ".t
 _DATEINAMEN = {"Dockerfile"}
 
 # Nie Quelltext: Abhaengigkeiten, Caches und andere Worktrees, ueberall.
-_AUSGENOMMENE_NAMEN = {".git", ".venv", "node_modules", "__pycache__", ".pytest_cache", ".ruff_cache"}
+_AUSGENOMMENE_NAMEN = {".git", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache", ".ruff_cache"}
 # Die per .gitignore ausgeschlossenen Ablagen, Skills und Agenten (Werkzeug
 # fuer die Sessions selbst, an keinen Cluster gebunden) und das unveraenderte
 # Quellpaket der Arbeitsweise (s. CLAUDE.md, Karte).

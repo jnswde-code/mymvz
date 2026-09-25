@@ -58,12 +58,17 @@ Projekt dazukommt:
 - `tests/test_regeln.py`: wacht über `CLAUDE.md`, `.claude/rules/` und die
   Zuordnung jeder Quelldatei zu einem Cluster
 
-`claude-arbeitsweise/` (Quellpaket, unverändert), `.claude/skills/` und
+`claude-arbeitsweise/` (Quellpaket), `.claude/skills/` und
 `.claude/agents/` gehören zu keinem Cluster.
 
 ## Tests
 
-    python3 -m pytest tests/
+Tests und Werkzeuge laufen im Docker-Container, nicht mit dem Python des
+Hosts: Lokal ist `python3` unter Windows nur ein Platzhalter, und der
+Container entspricht dem späteren Betrieb. `MSYS_NO_PATHCONV=1` hält Git
+Bash davon ab, `/w` in einen Windows-Pfad umzuschreiben.
+
+    MSYS_NO_PATHCONV=1 docker run --rm -v "$PWD:/w" -w /w python:3-slim sh -c "pip install -q pytest && python -m pytest tests/"
 
 ## Starten
 

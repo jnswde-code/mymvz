@@ -32,10 +32,15 @@ marker="${TMPDIR:-/tmp}/claude-memory-hinweis-${sitzung}"
 # Kein Repo (z.B. Scratch-Workspace) -> nichts zu melden.
 git rev-parse --git-dir >/dev/null 2>&1 || exit 0
 
-# Commits, die oben noch fehlen. Erst der Upstream des aktuellen Branches,
-# ersatzweise origin/main (ein frischer Branch ohne Upstream hat keinen).
-voraus="$(git log --oneline '@{u}..HEAD' 2>/dev/null)"
-[ -n "$voraus" ] || voraus="$(git log --oneline origin/main..HEAD 2>/dev/null)"
+# Commits, die oben noch fehlen. Gegen den Upstream des aktuellen Branches;
+# nur ein frischer Branch ohne Upstream vergleicht ersatzweise mit
+# origin/main. Ein gepushter Feature-Branch liegt immer vor origin/main und
+# loeste sonst in jeder Session aus.
+if git rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
+  voraus="$(git log --oneline '@{u}..HEAD' 2>/dev/null)"
+else
+  voraus="$(git log --oneline origin/main..HEAD 2>/dev/null)"
+fi
 [ -n "$voraus" ] || exit 0
 
 : > "$marker"
