@@ -22,10 +22,18 @@ paths:
 - HTTPS-Umleitung, HSTS und `SECURE_PROXY_SSL_HEADER` fehlen bewusst
   (`check --deploy` warnt): Sie kommen mit Caddy im Betrieb (#10). Ohne
   Proxy davor könnte jeder Client `X-Forwarded-Proto` selbst setzen.
-- Keine eigenen Django-Apps im Gerüst. `website`, `appointments` und später
-  `patients` legen ihre Issues an (#6, #7, #5); dann kommen sie hier in
-  `INSTALLED_APPS` und in die Karte in `CLAUDE.md`. Die Admin-Oberfläche ist
-  nicht eingebunden, das Backoffice ist #8.
+- Neue Apps kommen mit ihrem Issue in `INSTALLED_APPS` und in die Karte in
+  `CLAUDE.md`. Die Admin-Oberfläche ist nicht eingebunden, das Backoffice ist
+  #8.
+- `AUTH_USER_MODEL = "accounts.User"` stand vor der ersten eigenen Migration
+  (#25). Die Middleware-Reihenfolge Authentication → `OTPMiddleware` →
+  `RequireSecondFactorMiddleware` ist nötig (Regeldatei `accounts`).
+- Sitzungen enden nach 30 Minuten ohne Anfrage (`SESSION_SAVE_EVERY_REQUEST`)
+  und mit dem Browser (#25).
+
+## templates/base.html
+
+- Zeigt angemeldeten Konten Name, Konto-Link und Abmelden (POST).
 
 ## config/views.py, templates/home.html
 

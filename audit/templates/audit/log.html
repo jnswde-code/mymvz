@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Zugriffsprotokoll – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  <h1>Zugriffsprotokoll</h1>
+  <table>
+    <thead>
+      <tr><th>Zeit</th><th>Konto</th><th>Aktion</th><th>Typ</th><th>ID</th><th>Patient-ID</th><th>Treffer</th></tr>
+    </thead>
+    <tbody>
+      {% for entry in page %}
+        <tr>
+          <td>{{ entry.at|date:"d.m.Y H:i:s" }}</td>
+          <td>{{ entry.user.get_username }}</td>
+          <td>{{ entry.get_action_display }}</td>
+          <td>{{ entry.object_type }}</td>
+          <td>{{ entry.object_id }}</td>
+          <td>{{ entry.patient_id|default:"" }}</td>
+          <td>{{ entry.result_count|default_if_none:"" }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if page.has_previous %}<a href="?stand={{ as_of|urlencode }}&seite={{ page.previous_page_number }}">neuer</a>{% endif %}
+  {% if page.has_next %}<a href="?stand={{ as_of|urlencode }}&seite={{ page.next_page_number }}">älter</a>{% endif %}
+{% endblock %}

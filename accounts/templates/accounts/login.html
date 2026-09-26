@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Anmelden – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  <h1>Anmelden</h1>
+  <form method="post" action="{% url 'accounts:login' %}">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button type="submit">Weiter</button>
+  </form>
+{% endblock %}

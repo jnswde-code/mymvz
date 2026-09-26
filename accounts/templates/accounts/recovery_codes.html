@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Wiederherstellungscodes – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  <h1>Wiederherstellungscodes</h1>
+  <p>Der zweite Faktor ist eingerichtet. Mit diesen Codes kommen Sie ohne
+    Telefon herein, jeder gilt einmal. Bitte ausdrucken oder notieren und
+    getrennt vom Telefon aufbewahren. <strong>Sie werden nur jetzt angezeigt.</strong></p>
+  <ul>
+    {% for code in codes %}<li><code>{{ code }}</code></li>{% endfor %}
+  </ul>
+  <p><a href="{{ next }}">Weiter</a></p>
+{% endblock %}

@@ -6,6 +6,19 @@
   <title>{% block title %}MyMVZ Grevenbroich{% endblock %}</title>
 </head>
 <body>
+  {% if user.is_authenticated %}
+    <nav>
+      Angemeldet als {{ user.get_username }} ·
+      <a href="{% url 'accounts:account' %}">Konto</a>
+      {% if perms.audit.view_accesslogentry %}· <a href="{% url 'audit:log' %}">Zugriffsprotokoll</a>{% endif %}
+      <form method="post" action="{% url 'accounts:logout' %}" style="display:inline">
+        {% csrf_token %}<button type="submit">Abmelden</button>
+      </form>
+    </nav>
+  {% endif %}
+  {% if messages %}
+    <ul>{% for message in messages %}<li>{{ message }}</li>{% endfor %}</ul>
+  {% endif %}
   <main>
     {% block content %}{% endblock %}
   </main>

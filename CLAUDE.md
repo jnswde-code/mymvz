@@ -72,6 +72,20 @@ Projekt dazukommt:
 - `templates/`: Grundlayout `base.html` und Startseite
 - `manage.py`, `tests/test_env.py`, `tests/test_home.py`
 
+**`accounts`**: Konten, Anmeldung mit zweitem Faktor, Rollen
+- `accounts/models.py`: `User` (eigenes Modell), `LoginThrottle`
+- `accounts/views.py`, `accounts/middleware.py`: Anmeldung in zwei Schritten
+- `accounts/second_factor.py`: TOTP und Wiederherstellungscodes (django-otp)
+- `accounts/throttle.py`: Sperre nach Fehlversuchen
+- `accounts/roles.py`: Rollen als Gruppen; `accounts/testing.py`: Test-Helfer
+- `accounts/management/commands/`: Konten anlegen, deaktivieren, 2FA zurücksetzen
+- `tests/test_accounts_*.py`
+
+**`audit`**: Zugriffsprotokoll
+- `audit/models.py`: `AccessLogEntry`; `audit/log.py`: `log_access`
+- `audit/views.py`: Protokoll für die Verwaltung
+- `tests/test_audit.py`
+
 **`betrieb`**: Container, Compose, CI, Werkzeugkonfiguration
 - `Dockerfile`: Stufen `base`, `dev`, `prod`
 - `docker-compose.yml`: Entwicklung und Tests mit PostgreSQL
