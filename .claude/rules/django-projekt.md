@@ -13,6 +13,11 @@ paths:
 - Alles, was sich zwischen Rechnern unterscheidet, kommt aus `.env`, auch der
   öffentliche Hostname `SITE_HOST`: Er ist zuerst `mymvz.jnsw.de`, später
   `mymvz.de` (#10). `.env.example` nennt jede Variable ohne echten Wert.
+- `SITE_BASE_URL` ist der Anfang der Links in Mails, sonst
+  `https://SITE_HOST`. Mailversand (`EMAIL_*`, Absender, Adresse der Praxis
+  für inhaltsleere Hinweise) kommt ebenfalls aus `.env` (#7).
+- Fristen der Terminanfrage (`APPOINTMENTS_*`) stehen als Einstellungen an
+  einer Stelle, mit den Vorgaben aus #5, bis die Praxis andere nennt.
 - `env_bool` bricht bei unbekannten Werten ab, statt still `False` zu nehmen:
   Ein Tippfehler bei `DJANGO_DEBUG` soll nicht unbemerkt die Einstellung
   kippen (#4).

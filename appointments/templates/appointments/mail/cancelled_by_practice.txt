@@ -1,0 +1,7 @@
+{% autoescape off %}Guten Tag,
+
+leider müssen wir Ihren Termin absagen:
+
+{% include "appointments/mail/_appointment.txt" %}
+Bitte entschuldigen Sie. Für einen neuen Termin stellen Sie gern eine neue Anfrage oder rufen Sie uns an. Wenn die Praxis Ihnen direkt einen Ersatz anbietet, bekommen Sie dazu eine eigene E-Mail.
+{% include "appointments/mail/_footer.txt" %}{% endautoescape %}

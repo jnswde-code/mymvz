@@ -1,0 +1,5 @@
+<fieldset class="choices">
+  <legend>{{ field.label }}</legend>
+  {% for choice in field %}<label for="{{ choice.id_for_label }}">{{ choice.tag }} {{ choice.choice_label }}</label>{% endfor %}
+  {{ field.errors }}
+</fieldset>

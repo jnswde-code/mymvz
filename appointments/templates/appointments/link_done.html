@@ -1,0 +1,22 @@
+{% extends "appointments/layout.html" %}
+{% block title %}Erledigt{% endblock %}
+{% block content %}
+{% if result == "verified" %}
+  <h1>Danke, Ihre Anfrage ist bestätigt</h1>
+  <p>Die Praxis sieht Ihre Anfrage {{ reference }} jetzt und meldet sich per E-Mail bei Ihnen.
+  Sie ist noch kein Termin.</p>
+{% elif result == "withdrawn" %}
+  <h1>Ihre Anfrage ist zurückgezogen</h1>
+  <p>Die Praxis bearbeitet die Anfrage {{ reference }} nicht mehr.</p>
+{% elif result == "accepted" %}
+  <h1>Ihr Termin ist gebucht</h1>
+  {% include "appointments/_appointment.html" %}
+  <p>Sie bekommen eine Bestätigung per E-Mail. Bitte bringen Sie Ihre Versichertenkarte mit.</p>
+{% elif result == "declined" %}
+  <h1>Sie haben den Vorschlag abgelehnt</h1>
+  <p>Die Praxis sieht Ihre Anfrage {{ reference }} wieder und meldet sich bei Ihnen.</p>
+{% elif result == "cancelled" %}
+  <h1>Ihr Termin ist abgesagt</h1>
+  <p>Die Praxis ist informiert. Für einen neuen Termin stellen Sie gern eine neue Anfrage.</p>
+{% endif %}
+{% endblock %}

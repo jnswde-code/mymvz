@@ -1,13 +1,15 @@
 # mymvz
 
-Neue Website des MVZ Grevenbroich mit eigener Terminanfrage (statt
-Doctolib). Später wächst im selben Projekt die Praxissoftware. Konzept und
-Entscheidungen stehen in Issue #3.
+Eigene Terminanfrage des MVZ Grevenbroich (statt Doctolib), als Seite neben
+der bestehenden Homepage. Im selben Projekt wächst die Praxissoftware.
+Konzept und Entscheidungen stehen in Issue #3.
 
-Stand: Grundgerüst. Django 5.2 (LTS) mit PostgreSQL in Docker Compose und
-eine Platzhalter-Startseite, die zeigt, ob Anwendung und Datenbank laufen.
-Dazu Konten fürs Praxisteam mit Pflicht zum zweiten Faktor (TOTP-App),
-Rollen und ein Zugriffsprotokoll.
+Stand: Django 5.2 (LTS) mit PostgreSQL in Docker Compose. Konten fürs
+Praxisteam mit Pflicht zum zweiten Faktor (TOTP-App), Rollen und ein
+Zugriffsprotokoll. Die Terminanfrage für Patienten unter `/termin/`: Formular
+mit Spam-Schutz, Bestätigung der E-Mail-Adresse, Links zum Zurückziehen,
+Annehmen eines Vorschlags und Absagen. Die Bearbeitung durch die Praxis
+(Backoffice) folgt mit #8, der Löschlauf mit #9.
 
 ## Voraussetzungen
 
@@ -20,7 +22,13 @@ läuft im Container.
     docker compose run --rm web python manage.py migrate
     docker compose up
 
-Dann http://localhost:8000 öffnen.
+Dann http://localhost:8000/termin/ öffnen. Mails erscheinen in der Konsole
+(`docker compose up` zeigt sie). Damit die Links darin auf den eigenen
+Rechner zeigen, in der `.env` `SITE_BASE_URL=http://localhost:8000` setzen.
+
+**Wer eine `.env` von vor #7 hat**, ergänzt die neuen Variablen aus
+`.env.example` (`DEFAULT_FROM_EMAIL`, `PRACTICE_NOTIFICATION_EMAIL` und die
+`EMAIL_*`-Werte), sonst startet Django nicht.
 
 **Wer vor dem eigenen Benutzermodell (#25) schon migriert hat**, setzt die
 Datenbank einmal zurück, sonst passt das Schema nicht:
@@ -88,6 +96,9 @@ Pull Request.
 | `config/` | Django-Einstellungen (Werte aus `.env`), URLs, Startseite |
 | `accounts/` | Konten, Anmeldung mit zweitem Faktor, Rollen |
 | `audit/` | Zugriffsprotokoll |
+| `practice/` | Ärztinnen/Ärzte als Ressourcen, Öffnungs- und Sprechzeiten |
+| `appointments/` | Terminanfrage, Termine, Links in Mails, Spam-Schutz |
+| `reporting/` | Zählerstände ohne Personenbezug für Auswertungen |
 | `templates/` | gemeinsame Templates |
 | `voice/` | Sprachdienst mit eigenem Image |
 | `tests/` | pytest-Tests, darunter `test_regeln.py` für die Projektablage |

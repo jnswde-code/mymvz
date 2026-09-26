@@ -1,8 +1,9 @@
 """Django settings. Everything that differs between machines comes from `.env`."""
 
+from datetime import timedelta
 from pathlib import Path
 
-from config.env import allowed_hosts, env_bool, env_list, env_str
+from config.env import allowed_hosts, env_bool, env_list, env_optional, env_str
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -13,6 +14,8 @@ DEBUG = env_bool("DJANGO_DEBUG")
 # so it lives in .env and nowhere in the code.
 SITE_HOST = env_str("SITE_HOST")
 ALLOWED_HOSTS = allowed_hosts(SITE_HOST, env_list("DJANGO_EXTRA_HOSTS"), DEBUG)
+# Links in e-mails start with this; in development e.g. http://localhost:8000.
+SITE_BASE_URL = env_str("SITE_BASE_URL", f"https://{SITE_HOST}").rstrip("/")
 
 INSTALLED_APPS = [
     "django.contrib.auth",
@@ -25,6 +28,9 @@ INSTALLED_APPS = [
     "django_otp.plugins.otp_static",
     "accounts",
     "audit",
+    "practice",
+    "appointments",
+    "reporting",
 ]
 
 # Must be set before the first migration; changing it later is costly (#5, #25).
@@ -54,6 +60,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "practice.info.practice_info",
             ],
         },
     },
@@ -105,3 +112,34 @@ OTP_TOTP_ISSUER = "MyMVZ Grevenbroich"
 
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
+
+# One process per container for now (gunicorn without -w, #10), so the
+# per-process cache is enough for the per-address limit and the captcha
+# replay check. With several workers it needs a shared cache.
+CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+
+# E-mail. Development prints to the console; operation uses an EU provider (#10).
+EMAIL_BACKEND = env_str("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = env_str("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(env_str("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = env_optional("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env_optional("EMAIL_HOST_PASSWORD")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+DEFAULT_FROM_EMAIL = env_str("DEFAULT_FROM_EMAIL")
+# Gets "new request" and "cancelled" without any content (#7).
+PRACTICE_NOTIFICATION_EMAIL = env_str("PRACTICE_NOTIFICATION_EMAIL")
+
+# Appointment requests (#5, decisions of 26.09.2026). Defaults until the
+# practice names other values.
+APPOINTMENTS_VERIFY_EMAIL_WITHIN = timedelta(hours=24)
+APPOINTMENTS_CANCELLATION_NOTICE = timedelta(hours=24)
+APPOINTMENTS_MAX_WEEKS_AHEAD = 8
+APPOINTMENTS_PROPOSAL_WORKING_DAYS = 2
+# Calendar days in Europe/Berlin.
+APPOINTMENTS_RETENTION_DAYS = 30
+# Form submissions per client address and hour (spam protection, #7).
+APPOINTMENTS_SUBMISSIONS_PER_HOUR = 10
+# Version of the privacy notice shown with the form; stored with each request.
+APPOINTMENTS_PRIVACY_NOTICE_VERSION = "2026-09-26"
+# Proof of work of the captcha: the client tries on average half of these.
+APPOINTMENTS_CAPTCHA_MAX_NUMBER = 300_000

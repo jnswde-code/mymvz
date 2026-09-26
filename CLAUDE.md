@@ -1,9 +1,9 @@
 # mymvz
 
-Website des MVZ Grevenbroich mit eigener Terminanfrage statt Doctolib. Im
-selben Projekt wächst später die Praxissoftware (Stufen und Entscheidungen in
-#3). Stack: Django 5.2 (LTS) mit PostgreSQL, beides in Docker Compose,
-Seiten serverseitig gerendert. `README.md` beschreibt für Menschen, was es
+Terminanfrage des MVZ Grevenbroich statt Doctolib, als eigene Seite neben der
+bestehenden Homepage, und im selben Projekt die Praxissoftware (Stufen und
+Entscheidungen in #3). Stack: Django 5.2 (LTS) mit PostgreSQL, beides in
+Docker Compose, Seiten serverseitig gerendert. `README.md` beschreibt für Menschen, was es
 gibt und wie man es startet.
 
 ## Wie dieses Wissen abgelegt ist
@@ -86,6 +86,24 @@ Projekt dazukommt:
 - `audit/views.py`: Protokoll für die Verwaltung
 - `tests/test_audit.py`
 
+**`practice`**: Praxis als Stammdaten
+- `practice/models.py`: `Resource` (Ärztin/Arzt, später Raum, Gerät),
+  `OpeningHours` (Öffnungs- und Sprechzeiten)
+- `practice/info.py`: Name, Anschrift, Telefon, Links der Homepage
+- `tests/test_practice.py`
+
+**`appointments`**: Terminanfrage für Patienten, Termine, Links, Mails
+- `appointments/models.py`: Anfrage, Wunschzeiträume, Termin, Verlauf, Tokens
+- `appointments/services.py`: alle Zustandsübergänge und Löschfristen
+- `appointments/deadlines.py`: Fristen in Europe/Berlin
+- `appointments/tokens.py`, `appointments/mail.py`: Links und Mails
+- `appointments/captcha.py`, `appointments/spam.py`: Schutz vor Spam
+- `appointments/views.py`, `appointments/forms.py`: Formular und Link-Seiten
+- `tests/test_appointments_*.py`, `tests/factories.py`, `tests/conftest.py`
+
+**`reporting`**: Zählerstände ohne Personenbezug
+- `reporting/models.py`: `RequestStatistic`; `tests/test_reporting.py`
+
 **`betrieb`**: Container, Compose, CI, Werkzeugkonfiguration
 - `Dockerfile`: Stufen `base`, `dev`, `prod`
 - `docker-compose.yml`: Entwicklung und Tests mit PostgreSQL
@@ -135,7 +153,8 @@ prüft ihn mit, die Tests laufen in seinem Container (nach Änderungen an
     docker compose --profile voice run --rm --no-deps voice pytest
 
 `pytest` zeigt Branch-Coverage an, ohne Mindestquote. E2E-Tests
-(Playwright) kommen mit #7 und bekommen dann einen eigenen Befehl.
+(Playwright) kommen in einem Folge-PR zu #7 nach #13 und bekommen dann
+einen eigenen Befehl.
 
 **Pflichtfälle** (Warum und Muster in `.claude/rules/tests.md`, #22):
 - jede Verzweigung, Regex oder Randbedingung, die falsch sein könnte,
@@ -157,5 +176,6 @@ Systemgrenzen (Mail, SMS, KI-Anbieter, Uhr). Testdaten über Factories
     docker compose run --rm web python manage.py migrate
     docker compose up
 
-Die Seite läuft dann unter http://localhost:8000. `DJANGO_DEBUG=1` in der
-`.env` ist dafür nötig, sonst lehnt Django `localhost` ab.
+Die Seite läuft dann unter http://localhost:8000, die Terminanfrage unter
+`/termin/`. `DJANGO_DEBUG=1` in der `.env` ist dafür nötig, sonst lehnt
+Django `localhost` ab. Mails erscheinen in der Konsole.

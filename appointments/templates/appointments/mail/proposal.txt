@@ -1,0 +1,10 @@
+{% autoescape off %}Guten Tag,
+
+zu Ihren Wunschzeiten konnten wir leider keinen Termin vergeben. Wir schlagen Ihnen stattdessen vor:
+
+{% include "appointments/mail/_appointment.txt" %}
+Bitte sagen Sie bis {{ proposal_expires_at|date:"l, j. F Y" }}, {{ proposal_expires_at|time:"H:i" }} Uhr zu oder ab:
+{{ respond_url }}
+
+Ohne Antwort verfällt der Vorschlag, und die Praxis meldet sich erneut.
+{% include "appointments/mail/_footer.txt" %}{% endautoescape %}

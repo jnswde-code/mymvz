@@ -1,0 +1,7 @@
+{% extends "appointments/layout.html" %}
+{% block title %}Anfrage bestätigen{% endblock %}
+{% block content %}
+<h1>Anfrage bestätigen</h1>
+<p>Bitte bestätigen Sie Ihre Terminanfrage {{ reference }}. Danach sieht die Praxis sie und meldet sich bei Ihnen.</p>
+<form method="post">{% csrf_token %}<button type="submit">Anfrage bestätigen</button></form>
+{% endblock %}
