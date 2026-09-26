@@ -93,6 +93,15 @@ Projekt dazukommt:
   auf `main` und bei jedem PR
 - `pyproject.toml`: pytest und ruff; Abhängigkeiten in `requirements*.txt`
 
+**`voice`**: Sprachdienst mit LiveKit Agents, eigenes Image (#13)
+- `voice/mymvz_voice/agent.py`: Worker, Agent, Weiche im `llm_node`,
+  LiveKit-Einstellungen ohne Cloud
+- `voice/mymvz_voice/safety.py`: Wortfilter vor dem LLM;
+  `handoff.py`, `texts.py`: Weiterleitung und feste Ansagen
+- `voice/mymvz_voice/providers/`: Anbieterwahl per `.env`, Attrappen in `fake.py`
+- `voice/mymvz_voice/log_privacy.py`, `latency.py`, `config.py`, `join_token.py`
+- `voice/Dockerfile`, `voice/requirements*.txt`, `voice/tests/`
+
 **`werkzeug`**: Prüfungen der Projektablage selbst
 - `tests/test_regeln.py`: wacht über `CLAUDE.md`, `.claude/rules/` und die
   Zuordnung jeder Quelldatei zu einem Cluster
@@ -118,6 +127,13 @@ Nach einer Änderung an `requirements*.txt` oder am `Dockerfile` vorher
 `docker compose build web`. Formatieren: `ruff format .` im selben Container.
 Die CI (`.github/workflows/ci.yml`) baut das Image und führt dieselben
 Befehle aus, dazu `python manage.py makemigrations --check --dry-run`.
+Der Sprachdienst hat ein eigenes Image (Regeldatei `voice`); ruff oben
+prüft ihn mit, die Tests laufen in seinem Container (nach Änderungen an
+`voice/requirements*.txt` oder `voice/Dockerfile` vorher
+`docker compose --profile voice build voice`):
+
+    docker compose --profile voice run --rm --no-deps voice pytest
+
 `pytest` zeigt Branch-Coverage an, ohne Mindestquote. E2E-Tests
 (Playwright) kommen mit #7 und bekommen dann einen eigenen Befehl.
 

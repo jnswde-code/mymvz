@@ -20,6 +20,10 @@ jobs:
         run: docker compose run --rm web python manage.py makemigrations --check --dry-run
       - name: Tests
         run: docker compose run --rm web pytest
+      - name: Build voice agent
+        run: docker compose --profile voice build voice
+      - name: Voice agent tests
+        run: docker compose --profile voice run --rm --no-deps voice pytest
       - name: Down
         if: always()
         run: docker compose down -v
