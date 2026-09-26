@@ -11,9 +11,13 @@ _FALSE = {"0", "false", "no", "off", ""}
 
 
 def env_str(name: str, default: str | None = None) -> str:
-    """Return the variable, or `default`; without either the setup is broken."""
-    value = os.environ.get(name, default)
-    if value is None:
+    """Return the variable, or `default`; without either the setup is broken.
+
+    An empty value (`NAME=` in .env) counts as missing, so it neither passes
+    silently nor hides the default.
+    """
+    value = os.environ.get(name) or default
+    if not value:
         raise ImproperlyConfigured(f"Umgebungsvariable {name} fehlt (s. .env.example)")
     return value
 

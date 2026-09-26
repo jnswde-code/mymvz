@@ -29,7 +29,8 @@ durch lange Zufallswerte ersetzen und `DJANGO_DEBUG=0` setzen.
     docker compose run --rm web pytest
     docker compose run --rm --no-deps web sh -c "ruff check . && ruff format --check ."
 
-Dieselben Befehle laufen in GitHub Actions bei jedem Push und Pull Request.
+Dieselben Befehle laufen in GitHub Actions bei Push auf `main` und bei jedem
+Pull Request.
 
 ## Aufbau
 

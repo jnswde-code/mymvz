@@ -1,7 +1,7 @@
 .git
 .github
 .env
-.claude
+.claude/worktrees
 claude-arbeitsweise
 **/__pycache__
 .pytest_cache

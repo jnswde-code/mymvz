@@ -4,6 +4,7 @@ paths:
   - "config/**"
   - "templates/**"
   - "tests/test_{env,home}.py"
+  - ".env.example"
 ---
 # Django-Projekt: Einstellungen, URLs, gemeinsame Templates
 
@@ -16,8 +17,11 @@ paths:
   Ein Tippfehler bei `DJANGO_DEBUG` soll nicht unbemerkt die Einstellung
   kippen (#4).
 - `localhost` steht nur mit `DJANGO_DEBUG=1` in `ALLOWED_HOSTS`.
-- HTTPS-Umleitung und HSTS fehlen bewusst (`check --deploy` warnt): Sie
-  kommen mit Caddy im Betrieb (#10).
+- `env_str` behandelt `NAME=` wie eine fehlende Variable, sonst liefe ein
+  leerer `SITE_HOST` oder ein leeres Passwort still durch.
+- HTTPS-Umleitung, HSTS und `SECURE_PROXY_SSL_HEADER` fehlen bewusst
+  (`check --deploy` warnt): Sie kommen mit Caddy im Betrieb (#10). Ohne
+  Proxy davor könnte jeder Client `X-Forwarded-Proto` selbst setzen.
 - Keine eigenen Django-Apps im Gerüst. `website`, `appointments` und später
   `patients` legen ihre Issues an (#6, #7, #5); dann kommen sie hier in
   `INSTALLED_APPS` und in die Karte in `CLAUDE.md`. Die Admin-Oberfläche ist

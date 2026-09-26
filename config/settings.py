@@ -13,7 +13,6 @@ DEBUG = env_bool("DJANGO_DEBUG")
 # so it lives in .env and nowhere in the code.
 SITE_HOST = env_str("SITE_HOST")
 ALLOWED_HOSTS = allowed_hosts(SITE_HOST, env_list("DJANGO_EXTRA_HOSTS"), DEBUG)
-CSRF_TRUSTED_ORIGINS = [f"https://{SITE_HOST}"]
 
 INSTALLED_APPS = [
     "django.contrib.auth",
@@ -80,7 +79,5 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Behind Caddy (#10), which terminates TLS and sets X-Forwarded-Proto.
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG

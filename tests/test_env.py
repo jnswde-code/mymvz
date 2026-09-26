@@ -63,3 +63,10 @@ def test_allowed_hosts_local_only_in_debug():
 
 def test_allowed_hosts_without_duplicates():
     assert allowed_hosts("localhost", ["localhost"], debug=True).count("localhost") == 1
+
+
+def test_env_str_empty_counts_as_missing(monkeypatch):
+    monkeypatch.setenv("MYMVZ_TEST", "")
+    assert env_str("MYMVZ_TEST", "fallback") == "fallback"
+    with pytest.raises(ImproperlyConfigured, match="MYMVZ_TEST"):
+        env_str("MYMVZ_TEST")

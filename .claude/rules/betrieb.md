@@ -4,6 +4,8 @@ paths:
   - "docker-compose.yml"
   - ".github/workflows/*.yml"
   - "pyproject.toml"
+  - "requirements*.txt"
+  - ".dockerignore"
 ---
 # Betrieb: Container, Compose, CI, Werkzeugkonfiguration
 
@@ -20,11 +22,16 @@ paths:
 
 - Nur Entwicklung und Tests: `runserver`, Code als Volume, Port 8000. Der
   Betrieb mit Caddy, gunicorn und Worker bekommt eine eigene Datei (#10).
+- Der Healthcheck fragt Postgres über TCP (`-h 127.0.0.1`): Beim ersten Start
+  läuft kurz ein Init-Server nur auf dem Socket, und `web` startete sonst zu
+  früh. `db` bekommt nur die `POSTGRES_*`-Variablen, nicht die ganze `.env`.
 - Tests laufen gegen PostgreSQL im Compose, nicht gegen SQLite: Später
   zählen Postgres-Eigenheiten (Zeitzonen, Sperren, Constraints).
 
 ## .github/workflows/ci.yml
 
+- Läuft bei Push auf `main` und bei jedem PR; ein Push auf einen PR-Zweig
+  löst so nur einen Lauf aus, nicht zwei.
 - CI benutzt dieselben Compose-Befehle wie lokal und nimmt `.env.example` als
   `.env`. Die Werte dort taugen deshalb zum Testen, aber nie für den Betrieb.
 - `makemigrations --check` hält fest, dass zu jeder Modelländerung eine

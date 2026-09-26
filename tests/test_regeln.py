@@ -41,6 +41,7 @@ _AUSGENOMMENE_NAMEN = {
     "__pycache__",
     ".pytest_cache",
     ".ruff_cache",
+    "staticfiles",
 }
 # Die per .gitignore ausgeschlossenen Ablagen, Skills und Agenten (Werkzeug
 # fuer die Sessions selbst, an keinen Cluster gebunden) und das unveraenderte

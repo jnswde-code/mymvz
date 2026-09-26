@@ -68,14 +68,15 @@ Projekt dazukommt:
 - `config/settings.py`: Django-Einstellungen, alle Werte aus `.env`
 - `config/env.py`: Umgebungsvariablen lesen (`env_str`, `env_bool`, `env_list`)
 - `config/urls.py`, `config/views.py`: Platzhalter-Startseite
+- `config/wsgi.py`: Einstieg für gunicorn
 - `templates/`: Grundlayout `base.html` und Startseite
 - `manage.py`, `tests/test_env.py`, `tests/test_home.py`
 
 **`betrieb`**: Container, Compose, CI, Werkzeugkonfiguration
 - `Dockerfile`: Stufen `base`, `dev`, `prod`
 - `docker-compose.yml`: Entwicklung und Tests mit PostgreSQL
-- `.github/workflows/ci.yml`: Linter, Migrationsprüfung und Tests bei jedem
-  Push und PR
+- `.github/workflows/ci.yml`: Linter, Migrationsprüfung und Tests bei Push
+  auf `main` und bei jedem PR
 - `pyproject.toml`: pytest und ruff; Abhängigkeiten in `requirements*.txt`
 
 **`werkzeug`**: Prüfungen der Projektablage selbst
@@ -97,7 +98,8 @@ anlegen (`cp .env.example .env`); die Beispielwerte reichen für Tests.
 
 Nach einer Änderung an `requirements*.txt` oder am `Dockerfile` vorher
 `docker compose build web`. Formatieren: `ruff format .` im selben Container.
-Die CI (`.github/workflows/ci.yml`) führt genau diese Befehle aus.
+Die CI (`.github/workflows/ci.yml`) baut das Image und führt dieselben
+Befehle aus, dazu `python manage.py makemigrations --check --dry-run`.
 
 ## Starten
 
