@@ -1,9 +1,10 @@
-# mymvz – Projekt im Aufbau
+# mymvz
 
-Das Repo enthält noch keinen Anwendungscode, nur die Arbeitsweise für Claude
-(diese Datei, `.claude/`, `tests/test_regeln.py`) und das Quellpaket
-`claude-arbeitsweise/`. Zweck und Stack stehen hier, sobald sie feststehen.
-`README.md` beschreibt für Menschen, was es gibt und wie man es startet.
+Website des MVZ Grevenbroich mit eigener Terminanfrage statt Doctolib. Im
+selben Projekt wächst später die Praxissoftware (Stufen und Entscheidungen in
+#3). Stack: Django 5.2 (LTS) mit PostgreSQL, beides in Docker Compose,
+Seiten serverseitig gerendert. `README.md` beschreibt für Menschen, was es
+gibt und wie man es startet.
 
 ## Wie dieses Wissen abgelegt ist
 
@@ -27,7 +28,7 @@ Das Repo enthält noch keinen Anwendungscode, nur die Arbeitsweise für Claude
   Erklärt es eine bestimmte Codezeile, als Kommentar dorthin.
 - In diese Datei nur, was für jede Session gilt. Ein neues Modul bekommt hier
   eine Zeile in der Karte und in einer Regeldatei einen `paths:`-Eintrag.
-  Mit dem ersten Anwendungscode entstehen die ersten fachlichen Cluster.
+  Eine neue Django-App bekommt in der Regel einen eigenen Cluster.
 - Grenzen: diese Datei unter 300 Zeilen, eine Regeldatei unter 250.
   `tests/test_regeln.py` prüft beides, dazu dass jede Quelldatei in einem
   `paths:` steht und jedes Muster eine Datei trifft.
@@ -42,7 +43,10 @@ Projekt dazukommt:
 - **Hosting:** GitHub, [jnswde-code/mymvz](https://github.com/jnswde-code/mymvz).
   In Cloud-Sessions gibt es kein `gh`; Issues, PRs und Kommentare laufen über
   die GitHub-Tools der Session.
-- **Bezeichner:** noch festzulegen, sobald es Code gibt, dann durchgehend.
+- **Bezeichner:** Englisch im Code (Namen, Kommentare, Docstrings), weil
+  Django und die Bibliotheken englisch sind. Oberfläche, Texte für
+  Patienten und Praxis, Fehlermeldungen und Commits deutsch (#3,
+  Entscheidung 8). Regeldateien und `CLAUDE.md` bleiben deutsch.
 - **Zweige:** `main` ist die Integrationslinie. Einen Veröffentlichungszweig
   gibt es nicht.
 - **Modell:** In diesem Projekt gibt es nur Opus, kein Fable. Statt des
@@ -53,9 +57,26 @@ Projekt dazukommt:
   Test. Abgeschlossen ist sie erst mit einem grünen Lauf (Befehle unter
   „Tests“). Reine Verdrahtung braucht keinen Test.
 - **Secrets** stehen in `.env` und werden von dort gelesen, nie in Ausgaben,
-  Commits oder Dateien im Repo. Das Repo ist öffentlich.
+  Commits oder Dateien im Repo. Das Repo ist öffentlich. Jede neue Variable
+  kommt ohne echten Wert in `.env.example`.
+- **Gesundheitsdaten:** In Tests, Beispielen und Fixtures nur erfundene
+  Personen und Daten (DSGVO Art. 9, #3).
 
 ## Karte: Module und ihre Regeldatei
+
+**`django-projekt`**: Einstellungen, URLs, gemeinsame Templates
+- `config/settings.py`: Django-Einstellungen, alle Werte aus `.env`
+- `config/env.py`: Umgebungsvariablen lesen (`env_str`, `env_bool`, `env_list`)
+- `config/urls.py`, `config/views.py`: Platzhalter-Startseite
+- `templates/`: Grundlayout `base.html` und Startseite
+- `manage.py`, `tests/test_env.py`, `tests/test_home.py`
+
+**`betrieb`**: Container, Compose, CI, Werkzeugkonfiguration
+- `Dockerfile`: Stufen `base`, `dev`, `prod`
+- `docker-compose.yml`: Entwicklung und Tests mit PostgreSQL
+- `.github/workflows/ci.yml`: Linter, Migrationsprüfung und Tests bei jedem
+  Push und PR
+- `pyproject.toml`: pytest und ruff; Abhängigkeiten in `requirements*.txt`
 
 **`werkzeug`**: Prüfungen der Projektablage selbst
 - `tests/test_regeln.py`: wacht über `CLAUDE.md`, `.claude/rules/` und die
@@ -68,11 +89,20 @@ Projekt dazukommt:
 
 Tests und Werkzeuge laufen im Docker-Container, nicht mit dem Python des
 Hosts: Lokal ist `python3` unter Windows nur ein Platzhalter, und der
-Container entspricht dem späteren Betrieb. `MSYS_NO_PATHCONV=1` hält Git
-Bash davon ab, `/w` in einen Windows-Pfad umzuschreiben.
+Container entspricht dem späteren Betrieb. Einmal `.env` aus `.env.example`
+anlegen (`cp .env.example .env`); die Beispielwerte reichen für Tests.
 
-    MSYS_NO_PATHCONV=1 docker run --rm -v "$PWD:/w" -w /w python:3-slim sh -c "pip install -q pytest && python -m pytest tests/"
+    docker compose run --rm web pytest
+    docker compose run --rm --no-deps web sh -c "ruff check . && ruff format --check ."
+
+Nach einer Änderung an `requirements*.txt` oder am `Dockerfile` vorher
+`docker compose build web`. Formatieren: `ruff format .` im selben Container.
+Die CI (`.github/workflows/ci.yml`) führt genau diese Befehle aus.
 
 ## Starten
 
-Noch nichts zu starten.
+    docker compose run --rm web python manage.py migrate
+    docker compose up
+
+Die Seite läuft dann unter http://localhost:8000. `DJANGO_DEBUG=1` in der
+`.env` ist dafür nötig, sonst lehnt Django `localhost` ab.

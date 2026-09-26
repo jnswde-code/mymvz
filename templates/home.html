@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>MyMVZ Grevenbroich</h1>
+  <p>Hier entsteht die neue Website.</p>
+  {% if database_ok %}
+    <p>Anwendung und Datenbank laufen.</p>
+  {% else %}
+    <p>Die Datenbank ist nicht erreichbar.</p>
+  {% endif %}
+{% endblock %}
