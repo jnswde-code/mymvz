@@ -69,6 +69,8 @@ Anforderungen aus dem Konzept in #14, Abschnitte 3, 6 und 7.
   (`SafetyGate`): Jeder weitere Turn bekommt wieder die Notrufnummern.
 - Das LLM kann die Weiche über das Werkzeug `hand_off` auslösen, aber nie
   aufheben.
+- Die Sperre greift auch, wenn im Kontext kein Text der Anrufenden steht
+  (Antwort nach dem Werkzeug `hand_off`).
 - Der Filter prüft den fertigen Turn, nicht Zwischenergebnisse der STT.
   Ob das für das Kriterium „Weiche innerhalb von 10 Sekunden“ reicht,
   zeigt die Testsammlung in T0 (#14, 3.4).
@@ -85,9 +87,14 @@ Anforderungen aus dem Konzept in #14, Abschnitte 3, 6 und 7.
 
 - LiveKit schreibt auf Debug-Ebene jeden Gesprächsbeitrag mit Text und die
   Teilnehmerkennung ins Log (Felder `lk.pii.*`), bei SIP mit Rufnummer. Der
-  Filter ersetzt `lk.pii.*` ganz und jede Ziffernfolge ab sechs Stellen.
-  Er hängt je Job an den Handlern der Wurzel, nach LiveKits eigener
-  Einrichtung (#14, Abschnitt 6).
+  Filter ersetzt `lk.pii.*` ganz und jede Ziffernfolge ab sechs Stellen,
+  auch in Tracebacks und strukturierten Feldern (#14, Abschnitt 6).
+- Er hängt an den Handlern der Wurzel im Worker-Prozess, gesetzt beim
+  Ereignis `worker_started`, nachdem `cli.run_app` die Handler eingerichtet
+  hat. Job-Prozesse leiten ihre Einträge dorthin, und erst dort hängt
+  LiveKit Raumnamen an (bei SIP mit Rufnummer); ein Logger-Filter sähe sie
+  nicht. Ein fehlerhafter Log-Aufruf darf im Filter keine Ausnahme werfen,
+  sonst bricht er den Anruf ab.
 - Die Protokolle des LiveKit-Servers und des SIP-Dienstes sind damit nicht
   erfasst; die kommen mit T0 in #14.
 

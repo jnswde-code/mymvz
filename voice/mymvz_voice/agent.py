@@ -92,8 +92,8 @@ class ReceptionAgent(Agent):
         tools: list[llm.Tool],
         model_settings: ModelSettings,
     ) -> AsyncIterable[llm.ChatChunk | str]:
-        text = _last_user_text(chat_ctx)
-        detection = self.gate.check(text) if text else None
+        # Checked even without caller text, so a locked gate always answers.
+        detection = self.gate.check(_last_user_text(chat_ctx) or "")
         if detection is not None:
             async for sentence in respond(detection, self.transfer):
                 yield sentence
@@ -155,11 +155,13 @@ def build_session(settings: Settings) -> AgentSession:
 
 
 server = AgentServer()
+# The worker sets up its log handlers inside `cli.run_app`. Every job
+# process forwards its records there, where LiveKit adds the room name.
+server.on("worker_started", log_privacy.install)
 
 
 @server.rtc_session()
 async def entrypoint(ctx: JobContext) -> None:
-    log_privacy.install()
     session = build_session(load_settings())
     latency = LatencyLog()
 

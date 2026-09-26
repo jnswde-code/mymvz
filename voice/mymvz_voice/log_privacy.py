@@ -5,8 +5,8 @@ it logs every conversation item with its text, and participant identities,
 which for a SIP caller carry the phone number (`sip_+49...`). LiveKit marks
 such fields with the prefix `lk.pii.`; the filter replaces them entirely.
 Beyond that it blanks out every run of six or more digits, in the message,
-its arguments and all other extra fields. It errs on the side of blanking
-too much: a lost room id costs nothing, a leaked number does.
+its arguments, tracebacks and all other extra fields. It errs on the side
+of blanking too much: a lost room id costs nothing, a leaked number does.
 """
 
 from __future__ import annotations
@@ -31,13 +31,31 @@ def redact(text: str) -> str:
 
 
 def _redact_value(value: object) -> object:
-    return redact(value) if isinstance(value, str) else value
+    if isinstance(value, str):
+        return redact(value)
+    if value is None or isinstance(value, bool | float):
+        return value
+    # Lists, dicts, ints: checked as text, left as they are when clean.
+    text = str(value)
+    cleaned = redact(text)
+    return value if cleaned == text else cleaned
 
 
 class RedactPersonalData(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        record.msg = redact(record.getMessage())
+        try:
+            message = record.getMessage()
+        except Exception:  # a broken log call must not break the caller
+            message = f"{record.msg} {record.args}"
+        record.msg = redact(message)
         record.args = None
+        if record.exc_info and not record.exc_text:
+            # Formatters reuse exc_text instead of formatting exc_info again.
+            record.exc_text = logging.Formatter().formatException(record.exc_info)
+        if record.exc_text:
+            record.exc_text = redact(record.exc_text)
+        if record.stack_info:
+            record.stack_info = redact(record.stack_info)
         for key, value in vars(record).items():
             if key.startswith(_PII_PREFIX):
                 setattr(record, key, PII_REMOVED)
@@ -47,11 +65,13 @@ class RedactPersonalData(logging.Filter):
 
 
 def install() -> None:
-    """Put the filter on every handler of the root logger.
+    """Put the filter on every handler of the root logger, once.
 
-    Called at the start of each job, after LiveKit has set up its handlers
-    (in the job process they forward records to the worker process, so
-    they leave already cleaned).
+    Called in the worker process once LiveKit has set up its handlers. Job
+    processes forward their records to it, and LiveKit adds job fields such
+    as the room name only there, just before the handlers; for a SIP call
+    the room name contains the phone number. A handler filter sees them,
+    a logger filter would not.
     """
     for handler in logging.getLogger().handlers:
         if not any(isinstance(f, RedactPersonalData) for f in handler.filters):

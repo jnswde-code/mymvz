@@ -1,10 +1,17 @@
 """No phone numbers in logs (#14, section 6). All numbers are made up."""
 
 import logging
+import sys
 
 import pytest
 
-from mymvz_voice.log_privacy import PII_REMOVED, REDACTED, RedactPersonalData, install, redact
+from mymvz_voice.log_privacy import (
+    PII_REMOVED,
+    REDACTED,
+    RedactPersonalData,
+    install,
+    redact,
+)
 
 
 @pytest.mark.parametrize(
@@ -63,6 +70,27 @@ def test_filter_removes_fields_livekit_marks_as_personal():
     assert vars(record)["lk.pii.text"] == PII_REMOVED
     assert vars(record)["lk.pii.participant_identity"] == PII_REMOVED
     assert record.role == "user"
+
+
+def test_filter_cleans_tracebacks_and_structured_extras():
+    try:
+        raise LookupError("participant sip_+4921814757620 not found")
+    except LookupError:
+        record = logging.makeLogRecord(
+            {"msg": "failed", "exc_info": sys.exc_info(), "participants": ["sip_01721234567"]}
+        )
+    RedactPersonalData().filter(record)
+    output = logging.Formatter("%(message)s %(participants)s").format(record)
+    assert "4921814757620" not in output
+    assert "01721234567" not in output
+    assert "LookupError" in output
+
+
+def test_filter_survives_a_broken_format_string():
+    """A wrong log call must not break the call it is logged from."""
+    record = logging.makeLogRecord({"msg": "a %s %s", "args": ("0172 1234567",)})
+    assert RedactPersonalData().filter(record)
+    assert "1234567" not in record.getMessage()
 
 
 def test_install_puts_the_filter_on_every_root_handler_once():

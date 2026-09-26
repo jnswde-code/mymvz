@@ -13,6 +13,7 @@ from mymvz_voice import texts
 from mymvz_voice.agent import ReceptionAgent, build_session
 from mymvz_voice.config import load_settings
 from mymvz_voice.providers.fake import FAKE_REPLY, FakeLLM, _FakeLLMStream
+from mymvz_voice.safety import Reason
 
 
 class ToolCallingLLM(FakeLLM):
@@ -143,3 +144,12 @@ async def test_turn_handling_stays_off_livekit_cloud():
     session = build_session(load_settings({}))
     assert session.turn_detection == "stt"
     assert session.interruption_detection == "vad"
+
+
+async def test_after_an_emergency_replies_without_user_text_stay_off_the_llm(session):
+    """A reply with no caller text in the context still gets the numbers,
+    e.g. after the LLM tool raised the emergency and a reply is generated."""
+    session.current_agent.gate.escalate(Reason.EMERGENCY_HINT)
+    await session.generate_reply(instructions="Sag etwas.")
+    assert session.fake_llm.calls == 0
+    assert "112" in _assistant_texts(session)[-1]

@@ -47,6 +47,18 @@ def test_normalize_spells_out_umlauts_and_drops_punctuation():
         "Er ist ganz verwirrt.",
         "Sie reagiert nicht.",
         "Wir hatten einen Unfall.",
+        "Brust schmerzen, ganz stark.",
+        "Starke Brust- und Armschmerzen.",
+        "Ich habe Herzschmerzen.",
+        "Magenblutung, glaube ich.",
+        "Nachblutung nach der OP.",
+        "Er hört nicht auf zu bluten.",
+        "Nasenbluten seit einer Stunde.",
+        "Ich habe alle Tabletten genommen.",
+        "Ich habe Tabletten geschluckt, viel zu viele.",
+        "Er hat Gift getrunken.",
+        "Sie hat einen Anfall.",
+        "Meine Mutter reagiert nicht mehr.",
     ],
 )
 def test_emergency_hints_trigger(sentence):
@@ -61,6 +73,9 @@ def test_emergency_hints_trigger(sentence):
         "Ich möchte mir etwas antun.",
         "Ich will sterben.",
         "Ich bin lebensmüde.",
+        "Ich bringe mich um.",
+        "Ich möchte am liebsten sterben.",
+        "Ich will mich töten.",
     ],
 )
 def test_suicidal_thoughts_trigger_with_crisis_line(sentence):
@@ -117,6 +132,9 @@ def test_health_topics_trigger(sentence):
         "Ist die Praxis am Freitag offen?",
         "Ich hätte gern eine Gesundheitsuntersuchung.",
         "Mein Name ist Erika Beispiel.",
+        "Ich möchte zur Blutentnahme.",
+        "Die Website reagiert nicht.",
+        "Jetzt bin ich verwirrt wegen der Uhrzeit.",
     ],
 )
 def test_ordinary_requests_pass(sentence):
