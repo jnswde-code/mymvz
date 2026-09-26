@@ -136,6 +136,16 @@ def test_first_login_sets_up_app_and_shows_recovery_codes(client):
     assert is_logged_in(client)
 
 
+def test_each_login_gets_a_fresh_secret(client):
+    user = make_user()
+    password_step(client)
+    client.get(SETUP)
+    first = TOTPDevice.objects.get(user=user).key
+    password_step(client)
+    client.get(SETUP)
+    assert TOTPDevice.objects.get(user=user).key != first
+
+
 def test_setup_with_wrong_code_confirms_nothing(client):
     user = make_user()
     password_step(client)

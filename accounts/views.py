@@ -91,6 +91,9 @@ def login_view(request):
                 request.session[PENDING_SINCE] = timezone.now().timestamp()
                 request.session[PENDING_NEXT] = request.POST.get("next", "")
                 if second_factor.confirmed_totp_device(user) is None:
+                    # A fresh secret per login: whoever saw an earlier one
+                    # without confirming it must not share the final one.
+                    second_factor.discard_pending_devices(user)
                     return redirect("accounts:setup")
                 return redirect("accounts:verify")
     next_url = request.POST.get("next") or request.GET.get("next", "")

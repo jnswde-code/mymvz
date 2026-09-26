@@ -26,6 +26,9 @@ paths:
 - Einrichten der App geht nur für Konten ohne bestätigtes Gerät, sonst
   reichte das Passwort, um ein zweites Telefon anzumelden. Wer sein Telefon
   verliert, bekommt es per `reset_second_factor` zurückgesetzt.
+- Jeder Passwortschritt ohne bestätigtes Gerät verwirft das unbestätigte
+  Gerät. Sonst könnte jemand mit dem Anfangspasswort das Geheimnis ablesen,
+  ohne zu bestätigen, und später dasselbe besitzen wie der echte Nutzer.
 - Wiederherstellungscodes erscheinen genau einmal, in der Antwort auf das
   Einrichten, und stehen nie in der Sitzung. django-otp speichert sie im
   Klartext; sie gelten nur zusammen mit dem Passwort.

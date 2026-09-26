@@ -29,6 +29,10 @@ def pending_totp_device(user):
     return device
 
 
+def discard_pending_devices(user) -> None:
+    TOTPDevice.objects.filter(user=user, confirmed=False).delete()
+
+
 def manual_key(device) -> str:
     """The secret in groups of four, for typing it into an app by hand."""
     key = b32encode(device.bin_key).decode()
