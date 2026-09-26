@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Konto – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  <h1>Konto</h1>
+  <p>Benutzername: {{ user.get_username }}</p>
+  <p>Rollen: {% for role in roles %}{{ role }}{% if not forloop.last %}, {% endif %}{% empty %}keine{% endfor %}</p>
+  <p>Unbenutzte Wiederherstellungscodes: {{ recovery_codes_left }}</p>
+{% endblock %}

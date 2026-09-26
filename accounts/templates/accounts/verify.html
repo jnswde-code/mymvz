@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Code eingeben – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  <h1>Code eingeben</h1>
+  <p>Bitte den sechsstelligen Code aus Ihrer Authenticator-App eingeben.
+    Ohne Telefon geht auch einer Ihrer Wiederherstellungscodes; jeder gilt nur einmal.</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Anmelden</button>
+  </form>
+  <p><a href="{% url 'accounts:login' %}">Abbrechen</a></p>
+{% endblock %}

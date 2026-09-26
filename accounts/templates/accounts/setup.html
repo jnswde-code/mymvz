@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Zweiten Faktor einrichten – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  <h1>Zweiten Faktor einrichten</h1>
+  <p>Jedes Konto braucht zur Anmeldung zusätzlich einen Code vom Telefon.
+    Bitte eine Authenticator-App öffnen (z. B. FreeOTP, Aegis, Google oder
+    Microsoft Authenticator) und diesen QR-Code scannen:</p>
+  <div style="width:14rem">{{ qr_code|safe }}</div>
+  <p>Ohne Kamera diesen Schlüssel von Hand eingeben: <code>{{ manual_key }}</code></p>
+  <p>Danach den Code eingeben, den die App anzeigt.</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Einrichten</button>
+  </form>
+{% endblock %}
