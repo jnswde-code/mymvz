@@ -1,0 +1,9 @@
+{% extends "appointments/layout.html" %}
+{% block title %}Bitte E-Mail bestätigen{% endblock %}
+{% block content %}
+<h1>Fast geschafft</h1>
+<p>Wir haben Ihnen eine E-Mail geschickt. Bitte öffnen Sie den Link darin innerhalb von
+24 Stunden und bestätigen Sie Ihre Anfrage. Erst dann sieht die Praxis sie.</p>
+<p>Keine E-Mail bekommen? Schauen Sie bitte auch im Spam-Ordner nach, oder rufen Sie uns an:
+{{ practice.phone }}.</p>
+{% endblock %}

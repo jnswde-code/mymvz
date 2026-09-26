@@ -22,6 +22,11 @@ def env_str(name: str, default: str | None = None) -> str:
     return value
 
 
+def env_optional(name: str) -> str:
+    """For values that may stay empty, e.g. SMTP login without authentication."""
+    return os.environ.get(name, "").strip()
+
+
 def env_bool(name: str, default: bool = False) -> bool:
     value = os.environ.get(name)
     if value is None:

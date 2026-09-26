@@ -1,0 +1,38 @@
+<script>
+// Proof of work in the format of ALTCHA (appointments/captcha.py): find the
+// number whose SHA-256 together with the salt matches the challenge.
+(function () {
+  const form = document.getElementById("request-form");
+  const field = form.querySelector('input[name="altcha"]');
+  const button = form.querySelector('button[type="submit"]');
+  const status = document.getElementById("captcha-status");
+  const challenge = JSON.parse(document.getElementById("captcha-challenge").textContent);
+  const encoder = new TextEncoder();
+
+  async function sha256(text) {
+    const digest = await crypto.subtle.digest("SHA-256", encoder.encode(text));
+    return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  async function solve() {
+    for (let number = 0; number <= challenge.maxnumber; number++) {
+      if ((await sha256(challenge.salt + number)) === challenge.challenge) return number;
+    }
+    return null;
+  }
+
+  button.disabled = true;
+  status.textContent = "Schutz vor Spam wird geprüft …";
+  solve().then((number) => {
+    if (number === null) throw new Error("no solution");
+    field.value = btoa(JSON.stringify({
+      algorithm: challenge.algorithm, challenge: challenge.challenge,
+      number: number, salt: challenge.salt, signature: challenge.signature,
+    }));
+    button.disabled = false;
+    status.textContent = "";
+  }).catch(() => {
+    status.textContent = "Die Prüfung gegen Spam ist fehlgeschlagen. Bitte laden Sie die Seite neu.";
+  });
+})();
+</script>

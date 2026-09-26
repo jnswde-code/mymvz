@@ -1,0 +1,11 @@
+{% extends "appointments/layout.html" %}
+{% block title %}Termin absagen{% endblock %}
+{% block content %}
+<h1>Termin absagen</h1>
+{% include "appointments/_appointment.html" %}
+<form method="post">{% csrf_token %}
+  <label for="{{ cancel_form.reason.id_for_label }}">{{ cancel_form.reason.label }}</label>
+  {{ cancel_form.reason }}
+  <button type="submit">Termin absagen</button>
+</form>
+{% endblock %}

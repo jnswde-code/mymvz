@@ -1,0 +1,3 @@
+{% autoescape off %}Es gibt eine neue Terminanfrage. Sie steht im Backoffice.
+
+Diese E-Mail enthält bewusst keine Angaben zur Anfrage.{% endautoescape %}

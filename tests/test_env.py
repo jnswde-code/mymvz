@@ -1,7 +1,7 @@
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 
-from config.env import allowed_hosts, env_bool, env_list, env_str
+from config.env import allowed_hosts, env_bool, env_list, env_optional, env_str
 
 
 def test_env_str_missing_without_default_fails(monkeypatch):
@@ -70,3 +70,10 @@ def test_env_str_empty_counts_as_missing(monkeypatch):
     assert env_str("MYMVZ_TEST", "fallback") == "fallback"
     with pytest.raises(ImproperlyConfigured, match="MYMVZ_TEST"):
         env_str("MYMVZ_TEST")
+
+
+def test_env_optional_is_empty_when_missing(monkeypatch):
+    monkeypatch.delenv("MYMVZ_TEST", raising=False)
+    assert env_optional("MYMVZ_TEST") == ""
+    monkeypatch.setenv("MYMVZ_TEST", " user ")
+    assert env_optional("MYMVZ_TEST") == "user"

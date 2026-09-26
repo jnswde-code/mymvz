@@ -1,0 +1,13 @@
+{% autoescape off %}Guten Tag,
+
+Ihr Termin ist bestätigt:
+
+{% include "appointments/mail/_appointment.txt" %}
+Bitte bringen Sie Ihre Versichertenkarte mit.
+{% if cancel_url %}
+Falls Sie den Termin nicht wahrnehmen können, sagen Sie ihn bitte bis {{ deadline|date:"l, j. F Y" }}, {{ deadline|time:"H:i" }} Uhr über diesen Link ab:
+{{ cancel_url }}
+Danach bitte telefonisch.
+{% else %}
+Falls Sie den Termin nicht wahrnehmen können, sagen Sie ihn bitte telefonisch ab.
+{% endif %}{% include "appointments/mail/_footer.txt" %}{% endautoescape %}

@@ -1,0 +1,4 @@
+{% autoescape off %}Guten Tag,
+
+Ihre Wunschtermine sind vorbei, ohne dass die Praxis Ihre Anfrage bearbeiten konnte. Das tut uns leid. Bitte rufen Sie uns an oder stellen Sie eine neue Anfrage.
+{% include "appointments/mail/_footer.txt" %}{% endautoescape %}

@@ -1,0 +1,4 @@
+{% autoescape off %}Guten Tag,
+
+Ihre Terminanfrage können wir leider nicht über die Website vergeben. Bitte rufen Sie uns an, damit wir gemeinsam einen passenden Termin finden: {{ practice.phone }}.
+{% include "appointments/mail/_footer.txt" %}{% endautoescape %}

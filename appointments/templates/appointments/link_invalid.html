@@ -1,0 +1,15 @@
+{% extends "appointments/layout.html" %}
+{% block title %}Link nicht gültig{% endblock %}
+{% block content %}
+{% if problem == "expired" and purpose == "cancel" %}
+  <h1>Absage über den Link nicht mehr möglich</h1>
+  <p>Die Frist für eine Absage über die Website ist vorbei. Bitte sagen Sie telefonisch ab: {{ practice.phone }}.</p>
+{% elif problem == "expired" and purpose == "verify_email" %}
+  <h1>Link abgelaufen</h1>
+  <p>Der Link war 24 Stunden gültig. Bitte stellen Sie eine <a href="{% url 'appointments:request' %}">neue Anfrage</a>.</p>
+{% else %}
+  <h1>Dieser Link ist nicht mehr gültig</h1>
+  <p>Jeder Link in unseren E-Mails funktioniert nur einmal und nur, solange er zu Ihrer Anfrage passt.
+  Bei Fragen erreichen Sie uns telefonisch unter {{ practice.phone }}.</p>
+{% endif %}
+{% endblock %}
