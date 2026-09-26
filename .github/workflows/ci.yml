@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: .env from the example
+        run: cp .env.example .env
+      - name: Build
+        run: docker compose build web
+      - name: Lint
+        run: docker compose run --rm --no-deps web sh -c "ruff check . && ruff format --check ."
+      - name: Migrations complete
+        run: docker compose run --rm web python manage.py makemigrations --check --dry-run
+      - name: Tests
+        run: docker compose run --rm web pytest
+      - name: Down
+        if: always()
+        run: docker compose down -v

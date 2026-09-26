@@ -33,7 +33,16 @@ _ENDUNGEN = {".py", ".js", ".html", ".css", ".yml", ".yaml", ".sh", ".conf", ".t
 _DATEINAMEN = {"Dockerfile"}
 
 # Nie Quelltext: Abhaengigkeiten, Caches und andere Worktrees, ueberall.
-_AUSGENOMMENE_NAMEN = {".git", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache", ".ruff_cache"}
+_AUSGENOMMENE_NAMEN = {
+    ".git",
+    ".venv",
+    "venv",
+    "node_modules",
+    "__pycache__",
+    ".pytest_cache",
+    ".ruff_cache",
+    "staticfiles",
+}
 # Die per .gitignore ausgeschlossenen Ablagen, Skills und Agenten (Werkzeug
 # fuer die Sessions selbst, an keinen Cluster gebunden) und das unveraenderte
 # Quellpaket der Arbeitsweise (s. CLAUDE.md, Karte).
@@ -53,7 +62,8 @@ def _dateien() -> tuple[str, ...]:
         relativ = Path(ordner).relative_to(WURZEL).as_posix()
         praefix = "" if relativ == "." else relativ + "/"
         unterordner[:] = [
-            u for u in unterordner
+            u
+            for u in unterordner
             if u not in _AUSGENOMMENE_NAMEN and praefix + u not in _AUSGENOMMENE_ORDNER
         ]
         gefunden += [praefix + d for d in dateien]
@@ -61,10 +71,7 @@ def _dateien() -> tuple[str, ...]:
 
 
 def _quelldateien() -> list[str]:
-    return [
-        d for d in _dateien()
-        if Path(d).suffix in _ENDUNGEN or Path(d).name in _DATEINAMEN
-    ]
+    return [d for d in _dateien() if Path(d).suffix in _ENDUNGEN or Path(d).name in _DATEINAMEN]
 
 
 def _klammern_aufloesen(muster: str) -> list[str]:
@@ -74,7 +81,7 @@ def _klammern_aufloesen(muster: str) -> list[str]:
         return [muster]
     ergebnis = []
     for teil in treffer.group(1).split(","):
-        ergebnis += _klammern_aufloesen(muster[: treffer.start()] + teil + muster[treffer.end():])
+        ergebnis += _klammern_aufloesen(muster[: treffer.start()] + teil + muster[treffer.end() :])
     return ergebnis
 
 
@@ -124,7 +131,7 @@ def _pfade_lesen(text: str) -> list[str] | None:
     if "paths:" not in zeilen:
         return None
     pfade = []
-    for zeile in zeilen[zeilen.index("paths:") + 1:]:
+    for zeile in zeilen[zeilen.index("paths:") + 1 :]:
         if not re.match(r"\s+-", zeile):
             break
         eintrag = re.fullmatch(r'\s+-\s+"([^"]+)"', zeile)
