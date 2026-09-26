@@ -6,10 +6,16 @@
   <title>{% block title %}MyMVZ Grevenbroich{% endblock %}</title>
 </head>
 <body>
+  {% if synthetic_data %}
+    <div role="note" style="background:#ffd54f;color:#000;padding:.4em;text-align:center;font-weight:bold">
+      Testsystem – nur erfundene Daten
+    </div>
+  {% endif %}
   {% if user.is_authenticated %}
     <nav>
       Angemeldet als {{ user.get_username }} ·
       <a href="{% url 'accounts:account' %}">Konto</a>
+      {% if perms.patients.view_patient %}· <a href="{% url 'patients:search' %}">Patienten</a>{% endif %}
       {% if perms.audit.view_accesslogentry %}· <a href="{% url 'audit:log' %}">Zugriffsprotokoll</a>{% endif %}
       <form method="post" action="{% url 'accounts:logout' %}" style="display:inline">
         {% csrf_token %}<button type="submit">Abmelden</button>

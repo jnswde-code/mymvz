@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Patient – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  <h1>{% if patient.title %}{{ patient.title }} {% endif %}{{ patient.given_name }} {{ patient.family_name }}</h1>
+  {% if not patient.is_active %}<p><strong>inaktiv</strong></p>{% endif %}
+  {% if patient.deceased_on %}<p><strong>verstorben am {{ patient.deceased_on|date:"d.m.Y" }}</strong></p>{% endif %}
+  <dl>
+    {% if patient.birth_name %}<dt>Geburtsname</dt><dd>{{ patient.birth_name }}</dd>{% endif %}
+    <dt>Geburtsdatum</dt><dd>{{ patient.date_of_birth|date:"d.m.Y" }}</dd>
+    <dt>Geschlecht</dt><dd>{{ patient.get_sex_display }}</dd>
+    <dt>Anschrift</dt><dd>{{ patient.street }}<br>{{ patient.postal_code }} {{ patient.city }}</dd>
+    <dt>Telefon</dt><dd>{{ patient.phone }}</dd>
+    <dt>E-Mail</dt><dd>{{ patient.email }}</dd>
+  </dl>
+  {% if perms.patients.change_patient %}<p><a href="{% url 'patients:edit' patient.pk %}">Stammdaten ändern</a></p>{% endif %}
+
+  <h2>Kennungen</h2>
+  <ul>
+    {% for identifier in identifiers %}
+      <li>
+        {{ identifier.get_system_display }}: {{ identifier.value }}
+        {% if identifier.valid_until %}(beendet am {{ identifier.valid_until|date:"d.m.Y" }})
+        {% elif perms.patients.change_patient %}
+          <form method="post" action="{% url 'patients:end_identifier' patient.pk identifier.pk %}" style="display:inline">
+            {% csrf_token %}<button type="submit">beenden</button>
+          </form>
+        {% endif %}
+      </li>
+    {% empty %}
+      <li>keine</li>
+    {% endfor %}
+  </ul>
+  {% if perms.patients.change_patient %}
+    <form method="post" action="{% url 'patients:add_identifier' patient.pk %}">
+      {% csrf_token %}
+      {{ identifier_form.as_p }}
+      <button type="submit">Kennung hinzufügen</button>
+    </form>
+  {% endif %}
+
+  {% if care_team %}
+    <h2>Behandlungsteam</h2>
+    <ul>{% for member in care_team %}<li>{{ member.user.get_username }} seit {{ member.valid_from|date:"d.m.Y" }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  <h2>Verlauf der Stammdaten</h2>
+  {% if history %}
+    <table>
+      <thead><tr><th>Zeit</th><th>Konto</th><th>Feld</th><th>alt</th><th>neu</th></tr></thead>
+      <tbody>
+        {% for entry in history %}
+          <tr>
+            <td>{{ entry.changed_at|date:"d.m.Y H:i" }}</td>
+            <td>{{ entry.changed_by.get_username }}</td>
+            <td>{{ entry.field }}</td>
+            <td>{{ entry.old_value }}</td>
+            <td>{{ entry.new_value }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>Keine Änderungen.</p>
+  {% endif %}
+{% endblock %}

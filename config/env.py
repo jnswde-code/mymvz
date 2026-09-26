@@ -40,6 +40,14 @@ def env_bool(name: str, default: bool = False) -> bool:
     raise ImproperlyConfigured(f"{name}={value!r} ist kein Wahrheitswert (1/0, true/false)")
 
 
+def env_choice(name: str, choices: tuple[str, ...], default: str) -> str:
+    """One of `choices`; anything else stops the start instead of guessing."""
+    value = (os.environ.get(name) or default).strip().lower()
+    if value not in choices:
+        raise ImproperlyConfigured(f"{name}={value!r} ist keiner von {', '.join(choices)}")
+    return value
+
+
 def env_list(name: str, default: str = "") -> list[str]:
     """Comma-separated list, blanks and empty entries dropped."""
     return [item.strip() for item in os.environ.get(name, default).split(",") if item.strip()]

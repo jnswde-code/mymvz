@@ -3,7 +3,7 @@
 from datetime import timedelta
 from pathlib import Path
 
-from config.env import allowed_hosts, env_bool, env_list, env_optional, env_str
+from config.env import allowed_hosts, env_bool, env_choice, env_list, env_optional, env_str
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -17,6 +17,11 @@ ALLOWED_HOSTS = allowed_hosts(SITE_HOST, env_list("DJANGO_EXTRA_HOSTS"), DEBUG)
 # Links in e-mails start with this; in development e.g. http://localhost:8000.
 SITE_BASE_URL = env_str("SITE_BASE_URL", f"https://{SITE_HOST}").rstrip("/")
 
+# Only invented data until hosting and data protection are settled (#10, #23
+# section 8). "synthetic" shows a band on every team page and allows
+# `seed_demo`; "real" comes with K9.
+DATA_MODE = env_choice("DATA_MODE", ("synthetic", "real"), "synthetic")
+
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -29,6 +34,7 @@ INSTALLED_APPS = [
     "accounts",
     "audit",
     "practice",
+    "patients",
     "appointments",
     "reporting",
 ]
@@ -61,6 +67,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "practice.info.practice_info",
+                "config.context_processors.data_mode",
             ],
         },
     },

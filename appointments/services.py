@@ -425,6 +425,7 @@ def _new_appointment(request, start, end, resources, status, now):
         raise ValidationError({"end": "Das Ende muss nach dem Beginn liegen."})
     appointment = Appointment.objects.create(
         request=request,
+        patient=request.patient,
         appointment_type=request.appointment_type,
         start=start,
         end=end,
@@ -613,6 +614,28 @@ def expire_overdue_requests(now=None) -> int:
             mail.queue(mail.EXPIRED, request)
             count += 1
     return count
+
+
+# --- Patients --------------------------------------------------------------
+
+
+@transaction.atomic
+def assign_patient(request, patient, *, actor) -> AppointmentRequest:
+    """Link a request and its appointments to a patient, or unlink with None.
+
+    Always a decision of a human (#5 section 4): no function matches requests
+    to patients on its own. The snapshot in the request stays and is deleted
+    on its own schedule.
+    """
+    _require_staff(actor)
+    request = _lock(request)
+    previous = request.patient_id
+    request.patient = patient
+    request.save(update_fields=["patient", "updated_at"])
+    request.appointments.update(patient=patient, updated_at=timezone.now())
+    patient_id = patient.pk if patient is not None else previous
+    log_access(actor, "update", request, patient_id=patient_id)
+    return request
 
 
 def active_types():
