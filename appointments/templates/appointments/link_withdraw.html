@@ -1,0 +1,7 @@
+{% extends "appointments/layout.html" %}
+{% block title %}Anfrage zurückziehen{% endblock %}
+{% block content %}
+<h1>Anfrage zurückziehen</h1>
+<p>Möchten Sie Ihre Terminanfrage {{ reference }} zurückziehen? Die Praxis bearbeitet sie dann nicht mehr.</p>
+<form method="post">{% csrf_token %}<button type="submit">Anfrage zurückziehen</button></form>
+{% endblock %}

@@ -1,0 +1,2 @@
+  {{ appointment_start|date:"l, j. F Y" }}, {{ appointment_start|time:"H:i" }} Uhr
+  {{ practice.name }}, {{ practice.street }}, {{ practice.city }}

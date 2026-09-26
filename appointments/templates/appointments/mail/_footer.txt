@@ -1,0 +1,9 @@
+
+Kennung Ihrer Anfrage: {{ reference }}
+Bei Fragen erreichen Sie uns telefonisch unter {{ practice.phone }}.
+Im Notfall wählen Sie die 112, nachts und am Wochenende den ärztlichen Bereitschaftsdienst 116 117.
+
+{{ practice.name }}
+{{ practice.street }}, {{ practice.city }}
+
+Diese E-Mail wurde automatisch erstellt. Bitte antworten Sie nicht darauf und schicken Sie uns keine Befunde per E-Mail.

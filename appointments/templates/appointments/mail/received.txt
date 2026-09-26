@@ -1,0 +1,7 @@
+{% autoescape off %}Guten Tag,
+
+Ihre Terminanfrage ist bei uns eingegangen. Sie ist noch kein Termin: Die Praxis meldet sich per E-Mail mit einem Termin, einem anderen Vorschlag oder der Bitte, anzurufen.
+
+Wenn Sie die Anfrage nicht mehr brauchen, können Sie sie hier zurückziehen:
+{{ withdraw_url }}
+{% include "appointments/mail/_footer.txt" %}{% endautoescape %}

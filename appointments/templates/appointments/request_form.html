@@ -1,0 +1,71 @@
+{% extends "appointments/layout.html" %}
+{% block content %}
+<h1>Termin anfragen</h1>
+{% if not has_types %}
+  <p>Terminanfragen über die Website sind im Moment nicht möglich. Bitte rufen Sie uns an: {{ practice.phone }}.</p>
+{% else %}
+<p>Ihre Anfrage ist noch kein Termin. Die Praxis meldet sich per E-Mail mit einem Termin,
+einem anderen Vorschlag oder der Bitte, anzurufen. Akutes, Substitution und Hausbesuche
+vereinbaren Sie bitte telefonisch.</p>
+
+<form method="post" id="request-form" novalidate>
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+
+  <fieldset>
+    <legend>Termin</legend>
+    {% include "appointments/_choices.html" with field=form.appointment_type %}
+    {% if form.preferred_resource.field.queryset.exists %}
+      {% include "appointments/_field.html" with field=form.preferred_resource %}
+    {% endif %}
+  </fieldset>
+
+  <fieldset>
+    <legend>Wunschtermine (einer bis drei)</legend>
+    {% for day, part in form.windows %}
+      <div class="window">
+        <div>{% include "appointments/_field.html" with field=day %}</div>
+        <div>{% include "appointments/_field.html" with field=part %}</div>
+      </div>
+    {% endfor %}
+    <p class="help">Frühestens morgen, höchstens acht Wochen im Voraus, an Tagen mit Sprechstunde.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Patientin oder Patient</legend>
+    {% include "appointments/_field.html" with field=form.patient_first_name %}
+    {% include "appointments/_field.html" with field=form.patient_last_name %}
+    {% include "appointments/_field.html" with field=form.patient_date_of_birth %}
+    {% include "appointments/_choices.html" with field=form.is_existing_patient %}
+    {% include "appointments/_choices.html" with field=form.insurance_type %}
+    <div class="inline"><label>{{ form.for_other_person }} {{ form.for_other_person.label }}</label></div>
+    {% include "appointments/_field.html" with field=form.contact_name %}
+    {% include "appointments/_field.html" with field=form.contact_relationship %}
+  </fieldset>
+
+  <fieldset>
+    <legend>Kontakt</legend>
+    {% include "appointments/_field.html" with field=form.email %}
+    {% include "appointments/_field.html" with field=form.phone %}
+    {% include "appointments/_field.html" with field=form.note %}
+  </fieldset>
+
+  <div class="hp" aria-hidden="true">
+    <label for="{{ form.website.id_for_label }}">{{ form.website.label }}</label>
+    <input type="text" name="website" id="{{ form.website.id_for_label }}" tabindex="-1" autocomplete="off">
+  </div>
+  {{ form.altcha }}
+
+  <p class="help">Wir verwenden Ihre Angaben nur, um Ihren Termin zu vereinbaren, und löschen sie
+  spätestens 30 Tage nach dem Termin. Mehr dazu in der <a href="{{ practice.privacy_url }}">Datenschutzerklärung</a>.
+  Sie bekommen gleich eine E-Mail mit einem Link, mit dem Sie die Anfrage bestätigen.</p>
+
+  <noscript><p class="notice">Für den Schutz vor Spam braucht dieses Formular JavaScript.
+  Ohne JavaScript erreichen Sie uns telefonisch unter {{ practice.phone }}.</p></noscript>
+  <p class="help" id="captcha-status" aria-live="polite"></p>
+  <button type="submit">Anfrage senden</button>
+</form>
+{{ challenge|json_script:"captcha-challenge" }}
+{% include "appointments/_captcha_script.html" %}
+{% endif %}
+{% endblock %}

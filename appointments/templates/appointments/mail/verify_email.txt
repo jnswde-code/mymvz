@@ -1,0 +1,8 @@
+{% autoescape off %}Guten Tag,
+
+vielen Dank für Ihre Terminanfrage. Bitte bestätigen Sie sie innerhalb von 24 Stunden über diesen Link:
+
+{{ verify_url }}
+
+Erst danach sieht die Praxis Ihre Anfrage. Wenn Sie keine Anfrage gestellt haben, ignorieren Sie diese E-Mail bitte; die Angaben werden dann nach 24 Stunden gelöscht.
+{% include "appointments/mail/_footer.txt" %}{% endautoescape %}

@@ -23,7 +23,8 @@ Liste in `CLAUDE.md`, „Tests“; hier das Warum dazu.
   echten Uhr verglichen. Ein Test, der nur an bestimmten Tagen oder zur
   Umstellung auf Sommerzeit rot wird, ist sonst nicht wiederholbar.
 - E2E im Browser (Playwright) nur für die kritischen Wege, zuerst die
-  Terminanfrage. Eingerichtet wird das mit #7, nicht vorher; E2E laufen dann
+  Terminanfrage. Eingerichtet wird das in einem Folge-PR zu #7, sobald #13
+  `docker-compose.yml` und die CI nicht mehr ändert; E2E laufen dann
   getrennt von der Suite, in der CI immer.
 
 ## Pflichtfälle
