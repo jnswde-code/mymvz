@@ -20,6 +20,8 @@ data_file = "/tmp/.coverage"
 line-length = 100
 target-version = "py313"
 extend-exclude = ["claude-arbeitsweise"]
+# The voice agent (#13) is its own package under voice/.
+src = [".", "voice"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "DJ"]

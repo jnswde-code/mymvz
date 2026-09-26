@@ -27,6 +27,8 @@ paths:
   früh. `db` bekommt nur die `POSTGRES_*`-Variablen, nicht die ganze `.env`.
 - Tests laufen gegen PostgreSQL im Compose, nicht gegen SQLite: Später
   zählen Postgres-Eigenheiten (Zeitzonen, Sperren, Constraints).
+- `livekit` und `voice` stehen im Profil `voice` und starten nur mit
+  `--profile voice` (Regeldatei `voice`, #13).
 
 ## .github/workflows/ci.yml
 
@@ -36,8 +38,11 @@ paths:
   `.env`. Die Werte dort taugen deshalb zum Testen, aber nie für den Betrieb.
 - `makemigrations --check` hält fest, dass zu jeder Modelländerung eine
   Migration gehört.
+- Der Sprachdienst wird als eigenes Image gebaut und in seinem Container
+  getestet; ruff prüft ihn im Schritt „Lint“ mit (#13).
 
 ## pyproject.toml
 
 - Einstellungen für pytest und ruff. `claude-arbeitsweise/` ist von ruff
-  ausgenommen, es ist Quellpaket, kein Projektcode.
+  ausgenommen, es ist Quellpaket, kein Projektcode. `src` nennt `voice`,
+  damit ruff `mymvz_voice` als eigenes Paket sortiert.
