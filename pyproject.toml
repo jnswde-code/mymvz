@@ -6,7 +6,15 @@ requires-python = ">=3.13"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 testpaths = ["tests"]
-addopts = "--strict-markers"
+# Branch coverage is shown, never enforced (.claude/rules/tests.md, #22).
+addopts = "--strict-markers --cov --cov-report=term-missing:skip-covered"
+
+[tool.coverage.run]
+branch = true
+source = ["."]
+omit = ["tests/*", "*/tests/*", "*/migrations/*", "claude-arbeitsweise/*", "manage.py"]
+# Outside the repo: the code is mounted into the container as a volume.
+data_file = "/tmp/.coverage"
 
 [tool.ruff]
 line-length = 100

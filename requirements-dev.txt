@@ -1,4 +1,7 @@
 -r requirements.txt
 pytest~=9.1
 pytest-django~=4.14
+pytest-cov~=7.1
+factory-boy~=3.3
+time-machine~=3.5
 ruff~=0.16.9
