@@ -1,6 +1,6 @@
 ---
 name: wellen-organisation
-description: Ablauf für die Organisations-Session. Offene Issues sichten und auf Stand bringen, Entscheidungen des Nutzers bündeln, parallele Claude-Sessions in Wellen planen (Kennungen, Prompts, Aufwand, Parallelität nach Datei-Überschneidungen), sie per /loop samt Claude-Kontingenten überwachen, Merges über die Freigaben des Nutzers führen, aufräumen und nach jeder Welle einen Report schreiben (in der Welle erledigt, heute erledigt, bewusst nicht jetzt, als Nächstes). Verwenden, wenn der Nutzer Issues durchgehen, sortieren oder reduzieren will, fragt, welche Sessions er jetzt parallel starten kann oder was als Nächstes dran ist, eine Welle starten, überwachen oder abschließen will, nach Kontingent oder Verbrauch fragt, Sessions umbenennen oder archivieren lassen will, oder fragt, was heute erledigt wurde – auch wenn das Wort „Welle“ nicht fällt.
+description: Ablauf für die Organisations-Session. Offene Issues sichten und auf Stand bringen, Entscheidungen des Nutzers bündeln, große Vorhaben als Eltern-Issue mit Sub-Issues schneiden, parallele Claude-Sessions in Wellen planen (Kennungen, Prompts, Aufwand, Parallelität nach Datei-Überschneidungen), sie per /loop samt Claude-Kontingenten überwachen, Merges über die Freigaben des Nutzers führen, aufräumen und nach jeder Welle einen Report schreiben (in der Welle erledigt, heute erledigt, bewusst nicht jetzt, als Nächstes). Verwenden, wenn der Nutzer Issues durchgehen, sortieren oder reduzieren will, fragt, welche Sessions er jetzt parallel starten kann oder was als Nächstes dran ist, ein großes Vorhaben aufteilen will, eine Welle starten, überwachen oder abschließen will, nach Kontingent oder Verbrauch fragt, Sessions umbenennen oder archivieren lassen will, oder fragt, was heute erledigt wurde – auch wenn das Wort „Welle“ nicht fällt.
 ---
 
 # Wellen-Organisation
@@ -83,6 +83,8 @@ geschlossene Issues) und einordnen:
   `<details><summary>Ursprüngliche Fassung</summary>` darunter stehen lassen.
 - **blockiert:** durch eine Entscheidung, einen Zugang, eine andere Session
   oder ein anderes Issue. Immer benennen, woran genau.
+- **zu groß:** passt nicht in einen PR, den `/code-review` vollständig prüft.
+  In Sub-Issues schneiden (5).
 - **frei:** sofort bearbeitbar.
 
 **Schließen, Zusammenlegen und Neufassen erst nach dem Okay des Nutzers.**
@@ -133,6 +135,24 @@ Issue** und ins Memory, damit die ausführende Session sie dort findet.
 - **Konzept und Umsetzung in getrennten Sessions.** Der Nutzer nimmt das
   Konzept ab, bevor Code entsteht, und die Umsetzung startet mit dem
   abgestimmten Konzept im Issue statt mit dem langen Verlauf.
+- **Große Vorhaben schneiden.** Passt ein Vorhaben nicht in einen PR, den
+  `/code-review` vollständig prüft und den eine Session ohne Zusammenfassung
+  ihres Kontexts schafft, wird sein Issue zum Eltern-Issue. Das Konzept endet
+  dann mit dem Schnitt: Sub-Issues mit Titel, Reihenfolge und Abhängigkeiten.
+  Nach der Freigabe der Titel (2) legt die Konzept-Session sie an
+  (`gh issue create --parent <N>`, bestehende mit
+  `gh issue edit <N> --add-sub-issue <n>,<m>`).
+  - **Vertikal:** Jedes Sub-Issue liefert fertiges Verhalten, das sich von
+    außen testen lässt. Nicht erst Modelle, dann Views, dann Mails; solche
+    Teile liegen halb fertig in `main`.
+  - **Nicht zu klein:** Jedes Sub-Issue kostet einen PR, ein Review, eine
+    Merge-Freigabe des Nutzers und die Startkosten einer Session.
+  - **Eine Quelle:** Konzept und Entscheidungen stehen nur im Eltern-Issue.
+    Das Sub-Issue beginnt mit „Teil von #N“ und beschreibt nur seinen Teil.
+    Die ausführende Session liest das Eltern-Issue mit.
+  - **Reihenfolge:** Sub-Issues eines Vorhabens bekommen Kennungen F1, F2, ….
+    Teilen sie Dateien, ist der Merge des Vorgängers die Startbedingung.
+    Parallel laufen dann Sub-Issues verschiedener Vorhaben.
 - **Nicht in eine Welle:** große Umbauten, die fast jede Datei berühren, und
   alles, was eine Entscheidung des Nutzers braucht.
 - **Kapazität:** Läuft alles auf einem kleinen Server, je Session etwa 300 MB
@@ -226,6 +246,7 @@ der Wellenplan im Memory.
 
 ### Heute insgesamt erledigt
 - **Geschlossen:** #…, #… (je ein Halbsatz, was es bringt)
+- **Vorhaben:** #N <Kurzname>: x von y Sub-Issues erledigt (nur, was heute vorankam)
 - **Außerdem:** Handgriffe und Aufräumarbeiten
 - **Kontingente:** Woche <x> % (<t> Punkte je Stunde, hochgerechnet <h> % am Reset), Reset <Tag Uhrzeit>
 
