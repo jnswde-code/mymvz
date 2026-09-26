@@ -45,6 +45,9 @@ Projekt dazukommt:
 - **Bezeichner:** noch festzulegen, sobald es Code gibt, dann durchgehend.
 - **Zweige:** `main` ist die Integrationslinie. Einen Veröffentlichungszweig
   gibt es nicht.
+- **Modell:** In diesem Projekt gibt es nur Opus, kein Fable. Wo die
+  Arbeitsweise Fable empfiehlt, auf Opus arbeiten und die Stelle, an der ein
+  Fable-Fall vorliegt, im Issue benennen, damit ein Mensch sie besonders prüft.
 - **Test in derselben Änderung.** Enthält eine Änderung eine Verzweigung, eine
   Regex oder eine Randbedingung, die falsch sein könnte, bekommt sie einen
   Test. Abgeschlossen ist sie erst mit einem grünen Lauf (Befehle unter

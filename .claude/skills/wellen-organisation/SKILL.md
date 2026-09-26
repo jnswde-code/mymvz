@@ -6,8 +6,9 @@ description: Ablauf für die Organisations-Session. Offene Issues sichten und au
 # Wellen-Organisation
 
 Eine Session (die **Organisations-Session**, Opus reicht) sortiert die Arbeit.
-Die eigentliche Umsetzung machen andere Sessions, die der Nutzer startet. Die
-Organisations-Session plant, überwacht und führt Freigaben. Einen
+Die eigentliche Umsetzung machen andere Sessions. Die Organisations-Session
+plant sie, legt sie nach der Freigabe des Nutzers selbst an (5a), überwacht
+sie und führt Freigaben. Einen
 Veröffentlichungszweig oder ein Deploy gibt es in diesem Projekt nicht. Sie
 setzt selbst nur Kleines um, und das nur auf Wunsch.
 
@@ -118,10 +119,11 @@ Issue** und ins Memory, damit die ausführende Session sie dort findet.
 ## 5. Welle planen
 
 - **Kennungen:** je Session ein Buchstabe (A, B, … oder F1, F2 für
-  zusammengehörige Schritte). Der Session-Titel lautet `<Kennung> · #<Issues>`.
-  Die App vergibt den Titel selbst aus dem ersten Satz. Deshalb steht die
-  Kennung vorne im Prompt, und die Organisations-Session benennt jede neue
-  Session per `set_session_title` um, sobald sie auftaucht.
+  zusammengehörige Schritte). Der Session-Titel lautet
+  `<Kennung> · #<Issue> <Kurzname>`. Die Kennung steht auch vorne im Prompt.
+  Startet der Nutzer eine Session selbst, vergibt die App den Titel aus dem
+  ersten Satz, und die Organisations-Session benennt sie per
+  `set_session_title` um, sobald sie auftaucht.
 - **Tabelle** mit Kennung, Issue, Modell, Prompt, Parallel, Startbedingung und
   der Spalte „wo sie ohne den Nutzer anhält“.
 - **Prompt-Muster:**
@@ -134,15 +136,47 @@ Issue** und ins Memory, damit die ausführende Session sie dort findet.
 - **Kapazität:** Läuft alles auf einem kleinen Server, je Session etwa 300 MB
   rechnen und eine Reserve lassen. Dazu die Kontingente nach 1a.
 
+## 5a. Sessions anlegen
+
+Gibt der Nutzer die Wellentabelle frei („starten“, „ja“), legt die
+Organisations-Session je Zeile eine Session an, mit `create_session`
+(Session-Verwaltung):
+
+- `title`: `<Kennung> · #<Issue> <Kurzname>`. Das Umbenennen entfällt.
+- `prompt`: der Prompt aus der Tabelle, unverändert.
+- `model`: die Modell-ID zur Spalte „Modell“, aus der Umgebung der Session
+  (Systemprompt), nicht aus dem Gedächtnis.
+- `source_url`: das Repo des Projekts.
+- `environment_id` und `permission_mode` weglassen, beides erbt die neue
+  Session. Nie `plan`: Die Session wartet dann auf eine Freigabe, die niemand
+  sieht.
+
+Danach je Session eine Zeile ins Issue: „Welle <n>: Session <Kennung>
+gestartet“ mit Link und Session-ID, dazu dasselbe in den Wellenplan. Das
+Memory einer Cloud-Session verschwindet mit ihrem Container, das Issue nicht.
+
+Nicht selbst anlegen:
+- Zeilen, deren Startbedingung noch offen ist. Die legt ein späterer
+  Überwachungsdurchlauf an, sobald sie erfüllt ist (6).
+- Sessions, die auf dem Rechner des Nutzers laufen müssen (lokales Netz,
+  Hardware). Dafür den Prompt in den Chat.
+- Mehr, als die Tabelle freigibt. Bei einer Hochrechnung über 100 % (1a)
+  erst die Wahl des Nutzers einholen.
+
+Die Merge-Freigabe gibt der Nutzer weiterhin in der Session, die pusht
+(Grundsätze).
+
 ## 6. Überwachen
 
 Der Nutzer startet `/loop 15m Überwache Welle <n> (<Kennungen>) nach dem Wellenplan.`
 Jeder Durchlauf:
 
-1. Neue Sessions umbenennen (s. 5). Doppelte Sessions für dasselbe Issue
-   melden.
-2. Je Session: läuft sie, wartet sie auf den Nutzer (Frage, Rechteabfrage,
-   Merge-Freigabe) oder ist sie fertig?
+1. Vom Nutzer selbst gestartete Sessions umbenennen (5). Zeilen der
+   freigegebenen Tabelle, deren Startbedingung jetzt erfüllt ist, anlegen
+   (5a). Doppelte Sessions für dasselbe Issue melden.
+2. Je Session (`get_session`, Feld `status_bucket`): läuft sie, wartet sie
+   auf den Nutzer (Frage, Rechteabfrage, Merge-Freigabe), ist sie fertig oder
+   mit einem Fehler stehen geblieben (`failed`)?
 3. Überschneidungen der Branches, offene PRs, Checks auf `main`.
 4. Claude-Kontingente (1a).
 5. Kurz berichten, was der Nutzer tun muss, in welcher Session und in welcher
@@ -217,3 +251,6 @@ Ergänze die Liste, wenn dir etwas Neues passiert.
   Berliner Zeit nennen.
 - **`ps -eo` zeigt alle Benutzer.** Einen Prozess erst jemandem zuschreiben,
   wenn die Spalte `user` geprüft ist.
+- **`get_usage` fehlt in Cloud-Sessions.** `get_session` zeigt unter
+  `rate_limit_info` nur den Status (`allowed`, `allowed_warning`) und den
+  Reset. Dann Status und Reset nennen, keine Prozente schätzen.
