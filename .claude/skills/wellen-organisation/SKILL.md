@@ -1,20 +1,21 @@
 ---
 name: wellen-organisation
-description: Ablauf für die Organisations-Session. Offene Issues sichten und auf Stand bringen, Entscheidungen des Nutzers bündeln, parallele Claude-Sessions in Wellen planen (Kennungen, Prompts, Modellwahl, Parallelität nach Datei-Überschneidungen), sie per /loop samt Claude-Kontingenten überwachen, Merges über die Freigaben des Nutzers führen, aufräumen und nach jeder Welle einen Report schreiben (in der Welle erledigt, heute erledigt, bewusst nicht jetzt, als Nächstes). Verwenden, wenn der Nutzer Issues durchgehen, sortieren oder reduzieren will, fragt, welche Sessions er jetzt parallel starten kann oder was als Nächstes dran ist, eine Welle starten, überwachen oder abschließen will, nach Kontingent oder Verbrauch fragt, Sessions umbenennen oder archivieren lassen will, oder fragt, was heute erledigt wurde – auch wenn das Wort „Welle“ nicht fällt.
+description: Ablauf für die Organisations-Session. Offene Issues sichten und auf Stand bringen, Entscheidungen des Nutzers bündeln, parallele Claude-Sessions in Wellen planen (Kennungen, Prompts, Aufwand, Parallelität nach Datei-Überschneidungen), sie per /loop samt Claude-Kontingenten überwachen, Merges über die Freigaben des Nutzers führen, aufräumen und nach jeder Welle einen Report schreiben (in der Welle erledigt, heute erledigt, bewusst nicht jetzt, als Nächstes). Verwenden, wenn der Nutzer Issues durchgehen, sortieren oder reduzieren will, fragt, welche Sessions er jetzt parallel starten kann oder was als Nächstes dran ist, eine Welle starten, überwachen oder abschließen will, nach Kontingent oder Verbrauch fragt, Sessions umbenennen oder archivieren lassen will, oder fragt, was heute erledigt wurde – auch wenn das Wort „Welle“ nicht fällt.
 ---
 
 # Wellen-Organisation
 
-Eine Session (die **Organisations-Session**, Opus reicht) sortiert die Arbeit.
-Die eigentliche Umsetzung machen andere Sessions, die der Nutzer startet. Die
-Organisations-Session plant, überwacht und führt Freigaben. Einen
+Eine Session (die **Organisations-Session**) sortiert die Arbeit.
+Die eigentliche Umsetzung machen andere Sessions. Die Organisations-Session
+plant sie, legt sie nach der Freigabe des Nutzers selbst an (5a), überwacht
+sie und führt Freigaben. Einen
 Veröffentlichungszweig oder ein Deploy gibt es in diesem Projekt nicht. Sie
 setzt selbst nur Kleines um, und das nur auf Wunsch.
 
 ## Grundsätze
 
 - **Das Issue ist der Prompt.** Keine langen Extra-Prompts je Session. Stand,
-  Blocker, Dateien und Modell gehören als Kommentar ins Issue. Der Prompt ist
+  Blocker, Dateien und Aufwand gehören als Kommentar ins Issue. Der Prompt ist
   eine Zeile, die darauf verweist. Ein zweiter Text neben dem Issue läuft
   auseinander.
 - **Parallel nur ohne gemeinsame Dateien.** `CLAUDE.md` und
@@ -63,7 +64,7 @@ Wellenplan des Memorys. Ohne ihn gilt der Durchschnitt seit dem letzten Reset.
 | Lage | Empfehlung |
 |---|---|
 | Hochrechnung bis zum Reset unter 100 % | normal planen, neue Sessions starten, sobald Dateien und Merges es erlauben |
-| Hochrechnung über 100 % | nicht selbst anhalten. Dem Nutzer die Wahl vorlegen: warten, weniger Sessions parallel oder Opus statt Fable. Dazu die Uhrzeit, zu der 100 % erreicht wären. |
+| Hochrechnung über 100 % | nicht selbst anhalten. Dem Nutzer die Wahl vorlegen: warten, weniger Sessions parallel oder weniger Aufwand. Dazu die Uhrzeit, zu der 100 % erreicht wären. |
 | eigene Session über 80 % Kontext | an eine frische Organisations-Session übergeben: Stand ins Memory, dort weiter mit diesem Skill |
 
 Die Kontingente stehen in jeder Wellenplanung, in jedem Überwachungsdurchlauf
@@ -98,12 +99,13 @@ Kurz, und so, dass eine neue Session ohne weitere Erklärung loslegen kann:
 - **Hängt an:** Entscheidung (<wer>) / Zugang / Session X / Issue #N – oder „nichts“
 - **Umsetzung:** Einstieg Datei:Zeile, Randbedingungen, Tests
 - **Achtung:** Stolperfallen, Überschneidungen mit anderen Issues
-- **Modell:** Opus | Fable durchgehend | Fable bis zum abgestimmten Konzept, danach Opus – <Halbsatz Grund>
+- **Aufwand:** high | xhigh – <Halbsatz Grund>
 ```
 
-Fable bei unklarer Ursache über mehrere Schichten, bei Fehlern, die erst im
+`xhigh` bei unklarer Ursache über mehrere Schichten, bei Fehlern, die erst im
 Betrieb auffallen (Migration, Autorisierung, Datentrennung), bei Entwürfen
-über viele Module. Sonst Opus.
+über viele Module. Sonst `high`. Das Modell ist in diesem Projekt fest
+(`CLAUDE.md`), gewählt wird nur der Aufwand.
 
 Kommentare einzeln und nachvollziehbar posten, nicht als großes Skript mit
 vielen Schreibzugriffen; so ein Skript lehnt der Auto-Mode ab.
@@ -118,31 +120,67 @@ Issue** und ins Memory, damit die ausführende Session sie dort findet.
 ## 5. Welle planen
 
 - **Kennungen:** je Session ein Buchstabe (A, B, … oder F1, F2 für
-  zusammengehörige Schritte). Der Session-Titel lautet `<Kennung> · #<Issues>`.
-  Die App vergibt den Titel selbst aus dem ersten Satz. Deshalb steht die
-  Kennung vorne im Prompt, und die Organisations-Session benennt jede neue
-  Session per `set_session_title` um, sobald sie auftaucht.
-- **Tabelle** mit Kennung, Issue, Modell, Prompt, Parallel, Startbedingung und
+  zusammengehörige Schritte). Der Session-Titel lautet
+  `<Kennung> · #<Issue> <Kurzname>`. Die Kennung steht auch vorne im Prompt.
+  Startet der Nutzer eine Session selbst, vergibt die App den Titel aus dem
+  ersten Satz, und die Organisations-Session benennt sie per
+  `set_session_title` um, sobald sie auftaucht.
+- **Tabelle** mit Kennung, Issue, Aufwand, Prompt, Parallel, Startbedingung und
   der Spalte „wo sie ohne den Nutzer anhält“.
 - **Prompt-Muster:**
   - Umsetzung: `<K> · Bearbeite Issue #N. Der Kommentar „Stand <Datum>“ enthält den Stand.`
   - Konzept: `<K> · Erarbeite das Konzept für #N, wie im Issue beschrieben. Schreib es als Kommentar ins Issue und halte dann an. Noch nichts umsetzen.`
-- **Konzept und Umsetzung in getrennten Sessions.** Ein Modellwechsel mitten
-  in der Session liest den ganzen Kontext ungecacht neu ein.
+- **Konzept und Umsetzung in getrennten Sessions.** Der Nutzer nimmt das
+  Konzept ab, bevor Code entsteht, und die Umsetzung startet mit dem
+  abgestimmten Konzept im Issue statt mit dem langen Verlauf.
 - **Nicht in eine Welle:** große Umbauten, die fast jede Datei berühren, und
   alles, was eine Entscheidung des Nutzers braucht.
 - **Kapazität:** Läuft alles auf einem kleinen Server, je Session etwa 300 MB
   rechnen und eine Reserve lassen. Dazu die Kontingente nach 1a.
+
+## 5a. Sessions anlegen
+
+Gibt der Nutzer die Wellentabelle frei („starten“, „ja“), legt die
+Organisations-Session je Zeile eine Session an, mit `create_session`
+(Session-Verwaltung):
+
+- `title`: `<Kennung> · #<Issue> <Kurzname>`. Das Umbenennen entfällt.
+- `prompt`: der Prompt aus der Tabelle, unverändert.
+- `model` weglassen, die neue Session erbt es. Den Aufwand kann
+  `create_session` nicht setzen: Zeilen mit einem anderen Aufwand als dem
+  der Organisations-Session dem Nutzer nennen, er stellt ihn in der Session
+  um.
+- `source_url`: das Repo des Projekts.
+- `environment_id` und `permission_mode` weglassen, beides erbt die neue
+  Session. Nie `plan`: Die Session wartet dann auf eine Freigabe, die niemand
+  sieht.
+
+Danach je Session eine Zeile ins Issue: „Welle <n>: Session <Kennung>
+gestartet“ mit Link und Session-ID, dazu dasselbe in den Wellenplan. Das
+Memory einer Cloud-Session verschwindet mit ihrem Container, das Issue nicht.
+
+Nicht selbst anlegen:
+- Zeilen, deren Startbedingung noch offen ist. Die legt ein späterer
+  Überwachungsdurchlauf an, sobald sie erfüllt ist (6).
+- Sessions, die auf dem Rechner des Nutzers laufen müssen (lokales Netz,
+  Hardware). Dafür den Prompt in den Chat.
+- Mehr, als die Tabelle freigibt. Bei einer Hochrechnung über 100 % (1a)
+  erst die Wahl des Nutzers einholen.
+
+Die Merge-Freigabe gibt der Nutzer weiterhin in der Session, die pusht
+(Grundsätze).
 
 ## 6. Überwachen
 
 Der Nutzer startet `/loop 15m Überwache Welle <n> (<Kennungen>) nach dem Wellenplan.`
 Jeder Durchlauf:
 
-1. Neue Sessions umbenennen (s. 5). Doppelte Sessions für dasselbe Issue
-   melden.
-2. Je Session: läuft sie, wartet sie auf den Nutzer (Frage, Rechteabfrage,
-   Merge-Freigabe) oder ist sie fertig?
+1. Vom Nutzer selbst gestartete Sessions umbenennen (5). Zeilen der
+   freigegebenen Tabelle, deren Startbedingung jetzt erfüllt ist, anlegen
+   (5a). Doppelte Sessions für dasselbe Issue melden.
+2. Je Session (`get_session`, Feld `status_bucket`): läuft sie, wartet sie
+   auf den Nutzer (Frage, Rechteabfrage, Merge-Freigabe), ist sie fertig oder
+   mit einem Fehler stehen geblieben (`failed`)?
 3. Überschneidungen der Branches, offene PRs, Checks auf `main`.
 4. Claude-Kontingente (1a).
 5. Kurz berichten, was der Nutzer tun muss, in welcher Session und in welcher
@@ -199,7 +237,7 @@ der Wellenplan im Memory.
 - Entscheidungen, Freigaben (Merge in Session X), Handgriffe, jeweils mit Issue
 
 ### Als Nächstes
-| Kennung | Issue | Modell | Prompt | Parallel | Startbedingung |
+| Kennung | Issue | Aufwand | Prompt | Parallel | Startbedingung |
 |---|---|---|---|---|---|
 ```
 
@@ -217,3 +255,6 @@ Ergänze die Liste, wenn dir etwas Neues passiert.
   Berliner Zeit nennen.
 - **`ps -eo` zeigt alle Benutzer.** Einen Prozess erst jemandem zuschreiben,
   wenn die Spalte `user` geprüft ist.
+- **`get_usage` fehlt in Cloud-Sessions.** `get_session` zeigt unter
+  `rate_limit_info` nur den Status (`allowed`, `allowed_warning`) und den
+  Reset. Dann Status und Reset nennen, keine Prozente schätzen.
