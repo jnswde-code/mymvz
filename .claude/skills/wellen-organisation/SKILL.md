@@ -1,6 +1,6 @@
 ---
 name: wellen-organisation
-description: Ablauf für die Organisations-Session. Offene Issues sichten und auf Stand bringen, Entscheidungen des Nutzers bündeln, große Vorhaben als Eltern-Issue mit Sub-Issues schneiden, parallele Claude-Sessions in Wellen planen (Kennungen, Prompts, Aufwand, Parallelität nach Datei-Überschneidungen), sie per /loop samt Claude-Kontingenten überwachen, Merges über die Freigaben des Nutzers führen, aufräumen und nach jeder Welle einen Report schreiben (in der Welle erledigt, heute erledigt, bewusst nicht jetzt, als Nächstes). Verwenden, wenn der Nutzer Issues durchgehen, sortieren oder reduzieren will, fragt, welche Sessions er jetzt parallel starten kann oder was als Nächstes dran ist, ein großes Vorhaben aufteilen will, eine Welle starten, überwachen oder abschließen will, nach Kontingent oder Verbrauch fragt, Sessions umbenennen oder archivieren lassen will, oder fragt, was heute erledigt wurde – auch wenn das Wort „Welle“ nicht fällt.
+description: Ablauf für die Organisations-Session. Offene Issues sichten und auf Stand bringen, Entscheidungen des Nutzers bündeln, große Vorhaben in Sub-Issues schneiden, parallele Claude-Sessions in Wellen planen (Kennungen, Prompts, Aufwand, Parallelität nach Datei-Überschneidungen), sie per /loop samt Claude-Kontingenten überwachen, Merges über die Freigaben des Nutzers führen, aufräumen und nach jeder Welle einen Report schreiben (in der Welle erledigt, heute erledigt, bewusst nicht jetzt, als Nächstes). Verwenden, wenn der Nutzer Issues durchgehen, sortieren oder reduzieren will, fragt, welche Sessions er jetzt parallel starten kann oder was als Nächstes dran ist, ein großes Vorhaben aufteilen will, eine Welle starten, überwachen oder abschließen will, nach Kontingent oder Verbrauch fragt, Sessions umbenennen oder archivieren lassen will, oder fragt, was heute erledigt wurde – auch wenn das Wort „Welle“ nicht fällt.
 ---
 
 # Wellen-Organisation
@@ -83,8 +83,7 @@ geschlossene Issues) und einordnen:
   `<details><summary>Ursprüngliche Fassung</summary>` darunter stehen lassen.
 - **blockiert:** durch eine Entscheidung, einen Zugang, eine andere Session
   oder ein anderes Issue. Immer benennen, woran genau.
-- **zu groß:** passt nicht in einen PR, den `/code-review` vollständig prüft.
-  In Sub-Issues schneiden (5).
+- **zu groß** (Maß in 5): in Sub-Issues schneiden.
 - **frei:** sofort bearbeitbar.
 
 **Schließen, Zusammenlegen und Neufassen erst nach dem Okay des Nutzers.**
@@ -121,9 +120,9 @@ Issue** und ins Memory, damit die ausführende Session sie dort findet.
 
 ## 5. Welle planen
 
-- **Kennungen:** je Session ein Buchstabe (A, B, … oder F1, F2 für
-  zusammengehörige Schritte). Der Session-Titel lautet
-  `<Kennung> · #<Issue> <Kurzname>`. Die Kennung steht auch vorne im Prompt.
+- **Kennungen:** je Session ein Buchstabe (A, B, … oder F1, F2 für die
+  Sub-Issues eines Vorhabens, je Vorhaben ein eigener Buchstabe). Der
+  Session-Titel lautet `<Kennung> · #<Issue> <Kurzname>`. Die Kennung steht auch vorne im Prompt.
   Startet der Nutzer eine Session selbst, vergibt die App den Titel aus dem
   ersten Satz, und die Organisations-Session benennt sie per
   `set_session_title` um, sobald sie auftaucht.
@@ -132,27 +131,31 @@ Issue** und ins Memory, damit die ausführende Session sie dort findet.
 - **Prompt-Muster:**
   - Umsetzung: `<K> · Bearbeite Issue #N. Der Kommentar „Stand <Datum>“ enthält den Stand.`
   - Konzept: `<K> · Erarbeite das Konzept für #N, wie im Issue beschrieben. Schreib es als Kommentar ins Issue und halte dann an. Noch nichts umsetzen.`
+  - Konzept mit Schnitt: wie Konzept, dazu `Schließ es mit dem Schnitt in Sub-Issues nach Abschnitt 5 des Skills wellen-organisation ab.`
 - **Konzept und Umsetzung in getrennten Sessions.** Der Nutzer nimmt das
   Konzept ab, bevor Code entsteht, und die Umsetzung startet mit dem
   abgestimmten Konzept im Issue statt mit dem langen Verlauf.
 - **Große Vorhaben schneiden.** Passt ein Vorhaben nicht in einen PR, den
   `/code-review` vollständig prüft und den eine Session ohne Zusammenfassung
-  ihres Kontexts schafft, wird sein Issue zum Eltern-Issue. Das Konzept endet
-  dann mit dem Schnitt: Sub-Issues mit Titel, Reihenfolge und Abhängigkeiten.
-  Nach der Freigabe der Titel (2) legt die Konzept-Session sie an
-  (`gh issue create --parent <N>`, bestehende mit
-  `gh issue edit <N> --add-sub-issue <n>,<m>`).
+  ihres Kontexts schafft, wird sein Issue zum Eltern-Issue. Die Konzept-Session
+  (Prompt „Konzept mit Schnitt“) schließt ihr Konzept dann mit dem Schnitt ab:
+  Sub-Issues mit Titel, Reihenfolge und Abhängigkeiten. Nach der Freigabe der
+  Titel (2) legt die Organisations-Session sie an: lokal mit
+  `gh issue create --parent <N>`, bestehende mit
+  `gh issue edit <N> --add-sub-issue <n>,<m>`, in Cloud-Sessions mit den
+  GitHub-Tools der Session.
   - **Vertikal:** Jedes Sub-Issue liefert fertiges Verhalten, das sich von
     außen testen lässt. Nicht erst Modelle, dann Views, dann Mails; solche
     Teile liegen halb fertig in `main`.
   - **Nicht zu klein:** Jedes Sub-Issue kostet einen PR, ein Review, eine
     Merge-Freigabe des Nutzers und die Startkosten einer Session.
-  - **Eine Quelle:** Konzept und Entscheidungen stehen nur im Eltern-Issue.
-    Das Sub-Issue beginnt mit „Teil von #N“ und beschreibt nur seinen Teil.
-    Die ausführende Session liest das Eltern-Issue mit.
-  - **Reihenfolge:** Sub-Issues eines Vorhabens bekommen Kennungen F1, F2, ….
-    Teilen sie Dateien, ist der Merge des Vorgängers die Startbedingung.
-    Parallel laufen dann Sub-Issues verschiedener Vorhaben.
+  - **Eine Quelle:** Das Konzept und Entscheidungen für das ganze Vorhaben
+    stehen nur im Eltern-Issue. Das Sub-Issue beginnt mit „Teil von #N“ und
+    beschreibt nur seinen Teil. Die ausführende Session liest das Eltern-Issue
+    mit.
+  - **Reihenfolge:** Baut ein Sub-Issue auf einem anderen auf oder teilt es
+    Dateien mit ihm, ist dessen Merge die Startbedingung. Parallel laufen dann
+    Sub-Issues verschiedener Vorhaben.
 - **Nicht in eine Welle:** große Umbauten, die fast jede Datei berühren, und
   alles, was eine Entscheidung des Nutzers braucht.
 - **Kapazität:** Läuft alles auf einem kleinen Server, je Session etwa 300 MB
@@ -234,8 +237,9 @@ Oberfläche sichtbar ändert: je Seite eins vorher, eins nachher, im Chat.
 
 **Nach jeder Welle** schreibt die Organisations-Session einen Report in den
 Chat. Quellen, damit nichts aus dem Gedächtnis kommt: `git log --first-parent
---since="<heute> 00:00" origin/main`, heute geschlossene Issues und
-der Wellenplan im Memory.
+--since="<heute> 00:00" origin/main`, heute geschlossene Issues,
+`gh issue view <N> --json subIssuesSummary` je Eltern-Issue und der
+Wellenplan im Memory.
 
 ```
 ## Wellen-Report – Welle <n>, <Datum>, <Uhrzeit> Uhr
