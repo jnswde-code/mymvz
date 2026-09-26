@@ -83,6 +83,10 @@ Projekt dazukommt:
 - `tests/test_regeln.py`: wacht über `CLAUDE.md`, `.claude/rules/` und die
   Zuordnung jeder Quelldatei zu einem Cluster
 
+**`tests`**: Teststrategie für alle Tests (Pflichtfälle, Muster, Werkzeuge)
+- `**/tests/**`: jede Testdatei, zusätzlich zur Regeldatei ihres Moduls
+- `pyproject.toml`: Coverage-Anzeige
+
 `claude-arbeitsweise/` (Quellpaket), `.claude/skills/` und
 `.claude/agents/` gehören zu keinem Cluster.
 
@@ -100,6 +104,23 @@ Nach einer Änderung an `requirements*.txt` oder am `Dockerfile` vorher
 `docker compose build web`. Formatieren: `ruff format .` im selben Container.
 Die CI (`.github/workflows/ci.yml`) baut das Image und führt dieselben
 Befehle aus, dazu `python manage.py makemigrations --check --dry-run`.
+`pytest` zeigt Branch-Coverage an, ohne Mindestquote. E2E-Tests
+(Playwright) kommen mit #7 und bekommen dann einen eigenen Befehl.
+
+**Pflichtfälle** (Warum und Muster in `.claude/rules/tests.md`, #22):
+- jede Verzweigung, Regex oder Randbedingung, die falsch sein könnte,
+- jede Berechtigungsprüfung, immer auch der verbotene Fall (fremde Termine
+  und Patienten, fehlende Rolle, abgelaufener Link); die Rechtematrix aus
+  #23 vollständig als Tabelle,
+- Unveränderlichkeit der Akte auch per rohem SQL,
+- Löschfristen und Aufbewahrung, am Stichtag und daneben,
+- Zeitlogik in `Europe/Berlin`: Zeitumstellung, Mitternacht, Monatswechsel,
+- jede Migration, die Daten verändert,
+- jeder behobene Fehler: erst der rote Test, dann der Fix.
+
+Tests prüfen Verhalten von außen (Antwort, Datenbank, Mail); Mocks nur an
+Systemgrenzen (Mail, SMS, KI-Anbieter, Uhr). Testdaten über Factories
+(`factory_boy`), Zeit mit `time-machine`.
 
 ## Starten
 
