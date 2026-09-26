@@ -40,9 +40,13 @@ class Command(BaseCommand):
         except ValidationError as error:
             raise CommandError(" ".join(error.messages)) from error
         user.set_password(password)
+        names = {ROLES[r] for r in roles}
+        groups = list(Group.objects.filter(name__in=names))
+        if len(groups) != len(names):
+            raise CommandError("Rollen fehlen in der Datenbank; erst `migrate` ausführen.")
         with transaction.atomic():
             user.save()
-            user.groups.set(Group.objects.filter(name__in=[ROLES[r] for r in roles]))
+            user.groups.set(groups)
         self.stdout.write(
             f"Konto {username} angelegt. Beim ersten Anmelden wird der zweite Faktor eingerichtet."
         )

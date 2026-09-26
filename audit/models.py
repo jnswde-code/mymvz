@@ -41,7 +41,7 @@ class AccessLogEntry(models.Model):
     result_count = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
-        ordering = ["-at"]
+        ordering = ["-at", "-id"]
         verbose_name = "Protokolleintrag"
         verbose_name_plural = "Protokolleinträge"
         constraints = [

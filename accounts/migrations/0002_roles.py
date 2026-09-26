@@ -19,7 +19,7 @@ def create_roles(apps, schema_editor):
     for app_label in ("audit",):
         app_config = apps.get_app_config(app_label)
         app_config.models_module = True
-        create_permissions(app_config, verbosity=0)
+        create_permissions(app_config, verbosity=0, using=schema_editor.connection.alias, apps=apps)
         app_config.models_module = None
 
     Group = apps.get_model("auth", "Group")

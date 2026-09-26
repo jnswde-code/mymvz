@@ -77,14 +77,15 @@ def login_view(request):
     if request.method == "POST" and form.is_valid():
         username = form.cleaned_data["username"]
         keys = throttle.request_keys(request, username)
-        if throttle.is_locked(keys):
+        if not throttle.begin_attempt(keys):
             form.add_error(None, LOCKED)
         else:
             user = authenticate(request, username=username, password=form.cleaned_data["password"])
             if user is None:
-                throttle.register_failure(keys)
+                throttle.attempt_failed(keys)
                 form.add_error(None, INVALID_LOGIN)
             else:
+                throttle.attempt_succeeded(keys)
                 request.session.cycle_key()
                 request.session[PENDING_USER] = str(user.pk)
                 request.session[PENDING_SINCE] = timezone.now().timestamp()
@@ -92,9 +93,8 @@ def login_view(request):
                 if second_factor.confirmed_totp_device(user) is None:
                     return redirect("accounts:setup")
                 return redirect("accounts:verify")
-    return render(
-        request, "accounts/login.html", {"form": form, "next": request.GET.get("next", "")}
-    )
+    next_url = request.POST.get("next") or request.GET.get("next", "")
+    return render(request, "accounts/login.html", {"form": form, "next": next_url})
 
 
 @never_cache
@@ -107,14 +107,15 @@ def verify_view(request):
     form = CodeForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         keys = throttle.request_keys(request, user.get_username())
-        if throttle.is_locked(keys):
+        if not throttle.begin_attempt(keys):
             form.add_error(None, LOCKED)
         else:
             device = second_factor.verify(user, form.cleaned_data["code"])
             if device is None:
-                throttle.register_failure(keys)
+                throttle.attempt_failed(keys)
                 form.add_error("code", INVALID_CODE)
             else:
+                throttle.attempt_succeeded(keys)
                 next_url = _complete_login(request, user, device)
                 return redirect(_safe_next(request, next_url))
     return render(request, "accounts/verify.html", {"form": form})
@@ -133,14 +134,17 @@ def setup_view(request):
     form = CodeForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         keys = throttle.request_keys(request, user.get_username())
-        if throttle.is_locked(keys):
+        if not throttle.begin_attempt(keys):
             form.add_error(None, LOCKED)
         else:
             codes = second_factor.confirm_totp_device(device, form.cleaned_data["code"])
             if codes is None:
-                throttle.register_failure(keys)
+                throttle.attempt_failed(keys)
                 form.add_error("code", INVALID_CODE)
+                # The device may have gone meanwhile (second tab, reset).
+                device = second_factor.pending_totp_device(user)
             else:
+                throttle.attempt_succeeded(keys)
                 device.refresh_from_db()
                 next_url = _complete_login(request, user, device)
                 # Shown exactly once, in this response; never stored in the session.

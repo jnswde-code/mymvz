@@ -1,6 +1,7 @@
 """Login in two steps; the second factor cannot be skipped (#25)."""
 
 from datetime import timedelta
+from unittest.mock import patch
 
 import pytest
 from django.contrib.sessions.models import Session
@@ -209,6 +210,47 @@ def test_next_is_followed_only_on_this_site(client):
     device.save()
     password_step(client, next="https://evil.example/")
     assert client.post(VERIFY, {"code": current_code(device)}).url == ACCOUNT
+
+
+def test_next_survives_a_wrong_password(client):
+    make_user()
+    response = client.post(
+        f"{LOGIN}?next={AUDIT_LOG}",
+        {"username": "erika.beispiel", "password": "falsch-falsch-falsch", "next": AUDIT_LOG},
+    )
+    assert response.context["next"] == AUDIT_LOG
+
+
+@pytest.mark.parametrize("spacing", ["{} {}", "{}-{}", " {}{} "])
+def test_codes_may_contain_spaces_and_dashes(client, spacing):
+    user = make_user()
+    device = add_totp_device(user)
+    code = current_code(device)
+    password_step(client)
+    assert client.post(VERIFY, {"code": spacing.format(code[:3], code[3:])}).url == ACCOUNT
+
+
+def test_recovery_code_with_dash(client):
+    user = make_user()
+    add_totp_device(user)
+    code = new_recovery_codes(user)[0]
+    password_step(client)
+    assert client.post(VERIFY, {"code": f"{code[:4]}-{code[4:]}"}).url == ACCOUNT
+
+
+def test_setup_survives_a_vanished_device(client):
+    user = make_user()
+    password_step(client)
+    client.get(SETUP)
+    old = TOTPDevice.objects.get(user=user)
+    code = current_code(old)
+    # E.g. a second tab confirmed a different device, or a reset ran.
+    with patch("accounts.second_factor.pending_totp_device", return_value=old):
+        TOTPDevice.objects.filter(pk=old.pk).delete()
+        response = client.post(SETUP, {"code": code})
+    assert response.status_code == 200
+    assert views.INVALID_CODE in response.text
+    assert not is_logged_in(client)
 
 
 def test_logout_needs_post(client):

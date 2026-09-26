@@ -2,6 +2,7 @@
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.management import CommandError, call_command
 from django.db.models import ProtectedError
 from django_otp.plugins.otp_static.models import StaticDevice
@@ -47,6 +48,14 @@ def test_create_account_rejects_duplicate(monkeypatch):
     typed(monkeypatch, PASSWORD, PASSWORD)
     with pytest.raises(CommandError):
         call_command("create_account", "max.muster", "--role", "mfa")
+
+
+def test_create_account_fails_without_role_groups(monkeypatch):
+    Group.objects.filter(name=roles.ADMINISTRATION).delete()
+    typed(monkeypatch, PASSWORD, PASSWORD)
+    with pytest.raises(CommandError):
+        call_command("create_account", "max.muster", "--role", "administration")
+    assert not get_user_model().objects.exists()
 
 
 def test_create_account_needs_a_known_role():

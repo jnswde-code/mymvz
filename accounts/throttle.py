@@ -3,12 +3,17 @@
 Both steps of the login count: a wrong password and a wrong code. The account
 limit is low, the address limit high, because the whole practice shares one
 public address.
+
+An attempt is counted before it is checked (`begin_attempt`) and forgiven if
+it succeeds (`attempt_succeeded`). Counting only after the slow password check
+would let parallel requests all pass the lock check first.
 """
 
 from datetime import timedelta
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import F, Q
+from django.db.models.functions import Greatest
 from django.utils import timezone
 from django.utils.crypto import salted_hmac
 
@@ -47,29 +52,52 @@ def request_keys(request, username: str) -> list[tuple[str, int]]:
     ]
 
 
-def is_locked(keys: list[tuple[str, int]]) -> bool:
-    return LoginThrottle.objects.filter(
-        key__in=[key for key, _ in keys], locked_until__gt=timezone.now()
-    ).exists()
-
-
-def register_failure(keys: list[tuple[str, int]]) -> None:
+def purge_expired() -> None:
+    """Forget windows that are over and locks that have run out."""
     now = timezone.now()
+    LoginThrottle.objects.filter(window_start__lt=now - WINDOW).filter(
+        Q(locked_until__isnull=True) | Q(locked_until__lte=now)
+    ).delete()
+
+
+def begin_attempt(keys: list[tuple[str, int]]) -> bool:
+    """Count an attempt; False if it must not be checked at all.
+
+    Attempts still in flight count, so at most `limit` run at the same time.
+    """
+    now = timezone.now()
+    limits = dict(keys)
     with transaction.atomic():
-        # Forget windows that are over and locks that have run out.
-        LoginThrottle.objects.filter(window_start__lt=now - WINDOW).filter(
-            Q(locked_until__isnull=True) | Q(locked_until__lte=now)
-        ).delete()
-        for key, limit in keys:
-            entry, _ = LoginThrottle.objects.select_for_update().get_or_create(
-                key=key, defaults={"window_start": now}
-            )
+        purge_expired()
+        LoginThrottle.objects.bulk_create(
+            [LoginThrottle(key=key, window_start=now) for key in limits],
+            ignore_conflicts=True,
+        )
+        entries = list(LoginThrottle.objects.select_for_update().filter(key__in=limits))
+        for entry in entries:
             if entry.locked_until and entry.locked_until <= now:
+                # The lock has run out: start over, whatever WINDOW says.
                 entry.failures, entry.window_start, entry.locked_until = 0, now, None
+            if entry.locked_until or entry.failures >= limits[entry.key]:
+                return False
+        for entry in entries:
             entry.failures += 1
-            if entry.failures >= limit:
-                entry.locked_until = now + LOCK
             entry.save()
+    return True
+
+
+def attempt_failed(keys: list[tuple[str, int]]) -> None:
+    """Start the lock where the attempt reached the limit."""
+    for key, limit in keys:
+        LoginThrottle.objects.filter(
+            key=key, failures__gte=limit, locked_until__isnull=True
+        ).update(locked_until=timezone.now() + LOCK)
+
+
+def attempt_succeeded(keys: list[tuple[str, int]]) -> None:
+    LoginThrottle.objects.filter(key__in=[key for key, _ in keys]).update(
+        failures=Greatest(F("failures") - 1, 0)
+    )
 
 
 def reset_account(username: str) -> None:

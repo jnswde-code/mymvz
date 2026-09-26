@@ -101,3 +101,27 @@ def test_neither_address_nor_name_is_stored(client):
         assert "203.0.113" not in entry.key
         assert "erika" not in entry.key
         assert len(entry.key) == 64
+
+
+def test_attempts_in_flight_count_against_the_limit():
+    """Parallel requests cannot all pass the check before any is counted."""
+    keys = [(throttle.account_key("erika.beispiel"), throttle.ACCOUNT_LIMIT)]
+    for _ in range(throttle.ACCOUNT_LIMIT):
+        assert throttle.begin_attempt(keys)
+    assert not throttle.begin_attempt(keys)
+
+
+def test_successful_attempt_is_forgiven():
+    keys = [(throttle.account_key("erika.beispiel"), throttle.ACCOUNT_LIMIT)]
+    for _ in range(throttle.ACCOUNT_LIMIT * 2):
+        assert throttle.begin_attempt(keys)
+        throttle.attempt_succeeded(keys)
+
+
+def test_purge_removes_rows_after_their_window():
+    keys = [(throttle.address_key("203.0.113.7"), throttle.ADDRESS_LIMIT)]
+    throttle.begin_attempt(keys)
+    throttle.attempt_failed(keys)
+    LoginThrottle.objects.update(window_start=timezone.now() - throttle.WINDOW * 2)
+    throttle.purge_expired()
+    assert not LoginThrottle.objects.exists()

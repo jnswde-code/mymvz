@@ -22,6 +22,6 @@
       {% endfor %}
     </tbody>
   </table>
-  {% if page.has_previous %}<a href="?seite={{ page.previous_page_number }}">neuer</a>{% endif %}
-  {% if page.has_next %}<a href="?seite={{ page.next_page_number }}">älter</a>{% endif %}
+  {% if page.has_previous %}<a href="?stand={{ as_of|urlencode }}&seite={{ page.previous_page_number }}">neuer</a>{% endif %}
+  {% if page.has_next %}<a href="?stand={{ as_of|urlencode }}&seite={{ page.next_page_number }}">älter</a>{% endif %}
 {% endblock %}

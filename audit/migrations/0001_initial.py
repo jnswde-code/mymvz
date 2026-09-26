@@ -63,7 +63,7 @@ class Migration(migrations.Migration):
             options={
                 "verbose_name": "Protokolleintrag",
                 "verbose_name_plural": "Protokolleinträge",
-                "ordering": ["-at"],
+                "ordering": ["-at", "-id"],
                 "constraints": [
                     models.CheckConstraint(
                         condition=models.Q(

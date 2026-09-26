@@ -5,6 +5,7 @@ from base64 import b32encode
 
 import qrcode
 import qrcode.image.svg
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django_otp.plugins.otp_static.models import StaticDevice, StaticToken
 from django_otp.plugins.otp_totp.models import TOTPDevice
@@ -19,9 +20,12 @@ def confirmed_totp_device(user):
 
 def pending_totp_device(user):
     """The device being set up; the same one on every reload of the page."""
-    device = TOTPDevice.objects.filter(user=user, confirmed=False).first()
-    if device is None:
-        device = TOTPDevice.objects.create(user=user, name="Authenticator-App", confirmed=False)
+    with transaction.atomic():
+        # Locking the user keeps two parallel loads from creating two secrets.
+        get_user_model().objects.select_for_update().get(pk=user.pk)
+        device = TOTPDevice.objects.filter(user=user, confirmed=False).first()
+        if device is None:
+            device = TOTPDevice.objects.create(user=user, name="Authenticator-App", confirmed=False)
     return device
 
 
@@ -61,8 +65,8 @@ def verify(user, code: str):
 def confirm_totp_device(device, code: str) -> list[str] | None:
     """Confirm the device being set up; returns fresh recovery codes."""
     with transaction.atomic():
-        device = TOTPDevice.objects.select_for_update().get(pk=device.pk)
-        if not device.verify_token(_normalize(code)):
+        device = TOTPDevice.objects.select_for_update().filter(pk=device.pk).first()
+        if device is None or not device.verify_token(_normalize(code)):
             return None
         device.confirmed = True
         device.save()

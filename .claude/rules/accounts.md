@@ -44,8 +44,14 @@ paths:
 - Sperre je Kontoname (5 Fehlversuche) und je Adresse (20) für 15 Minuten.
   Beide Schritte zählen. Die Adressgrenze ist hoch, weil die Praxis eine
   gemeinsame öffentliche Adresse hat.
-- Gespeichert wird nur ein HMAC von Name bzw. Adresse, und nur bis das
-  Zeitfenster abläuft; keine IP-Adresse bleibt liegen (#5, #25).
+- Ein Versuch wird vor der Prüfung gezählt und bei Erfolg zurückgenommen.
+  Zählte er erst danach, kämen parallele Anfragen alle an der Sperre vorbei,
+  solange das Passwort-Hashing läuft.
+- Gespeichert wird nur ein HMAC von Name bzw. Adresse (#5, #25).
+  `purge_expired` entfernt abgelaufene Zeilen bei jedem Versuch; der
+  Löschlauf (#9) soll es zusätzlich regelmäßig aufrufen, damit nach dem
+  letzten Fehlversuch nichts liegen bleibt. Mit `SECRET_KEY` ließe sich eine
+  IPv4-Adresse aus dem HMAC zurückrechnen.
 - Auch unbekannte Namen werden gesperrt, damit die Sperre nicht verrät, ob es
   ein Konto gibt.
 - `client_address` liest `REMOTE_ADDR`. Hinter Caddy (#10) muss es die von

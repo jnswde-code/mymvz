@@ -99,3 +99,17 @@ def test_denied_access_writes_no_entry(client):
     login_with_second_factor(client, make_user(roles=[roles.MFA]))
     assert client.get(reverse("audit:log")).status_code == 403
     assert not AccessLogEntry.objects.exists()
+
+
+def test_log_pages_from_a_fixed_point_in_time(client):
+    user = make_user(roles=[roles.ADMINISTRATION])
+    login_with_second_factor(client, user)
+    before = log_access(user, "list", Group)
+    response = client.get(reverse("audit:log"), {"stand": before.at.isoformat()})
+    assert [e.pk for e in response.context["page"]] == [before.pk]
+
+
+@pytest.mark.parametrize("stand", ["kaputt", "2026-13-45T99:00", "2026-09-26T10:00"])
+def test_log_tolerates_odd_points_in_time(client, stand):
+    login_with_second_factor(client, make_user(roles=[roles.ADMINISTRATION]))
+    assert client.get(reverse("audit:log"), {"stand": stand}).status_code == 200
