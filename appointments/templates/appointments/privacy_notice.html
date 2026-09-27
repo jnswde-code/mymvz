@@ -32,8 +32,8 @@ Die vollständigen Angaben stehen im <a href="{{ practice.imprint_url }}">Impres
 </ul>
 <p>Dazu speichern wir eine Kennung der Anfrage, wann Sie sie gestellt und die E-Mail-Adresse
 bestätigt haben, den Verlauf (etwa „Termin vergeben“ oder „abgesagt“ mit Zeitpunkt und Grund
-aus einer festen Liste), welchen Stand dieses Hinweises Sie gesehen haben, und später den
-Termin selbst. Von den Links in unseren E-Mails speichern wir nur einen Prüfwert, nicht den
+aus einer festen Liste), welchen Stand dieses Hinweises Sie gesehen haben, später den
+Termin selbst und interne Notizen des Praxisteams zur Anfrage. Von den Links in unseren E-Mails speichern wir nur einen Prüfwert, nicht den
 Link.</p>
 <p>Wir fragen nicht nach Anschrift, Versichertennummer oder Befunden, und Sie können keine
 Dateien hochladen. Schon die Terminart kann eine Angabe zu Ihrer Gesundheit sein, ebenso die
@@ -81,7 +81,7 @@ IP-Adresse gekürzt, Löschung nach 7 Tagen]</span></p>
 <h2>Wer die Daten sieht</h2>
 <ul>
   <li>Das Praxisteam, jede und jeder mit eigenem Konto und zweitem Faktor bei der Anmeldung.
-    Wer eine Anfrage ansieht oder ändert, wird protokolliert.</li>
+    Wer eine Anfrage anlegt oder ändert, wird protokolliert.</li>
   <li>Die Praxis erfährt per E-Mail nur, dass eine neue Anfrage eingegangen oder ein Termin
     abgesagt worden ist, ohne Inhalt.</li>
   <li>E-Mails an Sie enthalten nur Datum, Uhrzeit, Anschrift der Praxis, die Kennung der Anfrage
@@ -105,7 +105,7 @@ IP-Adresse gekürzt, Löschung nach 7 Tagen]</span></p>
 <ul>
   <li>Anfragen, deren E-Mail-Adresse nicht bestätigt wird: {{ verify_hours }} Stunden nach dem Absenden.</li>
   <li>Offene Anfragen bleiben, bis wir antworten oder alle Wunschtage vorbei sind. Einen
-    Terminvorschlag können Sie {{ proposal_working_days }} Werktage lang annehmen, längstens bis zum
+    Terminvorschlag können Sie {{ proposal_working_days }} Werktage (Montag bis Freitag) lang annehmen, längstens bis zum
     vorgeschlagenen Termin.</li>
   <li>Abgelehnte, zurückgezogene und verfallene Anfragen: {{ retention_days }} Tage danach.</li>
   <li>Vereinbarte Termine: {{ retention_days }} Tage nach dem Termin, abgesagte {{ retention_days }} Tage

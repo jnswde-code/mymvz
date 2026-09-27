@@ -82,8 +82,9 @@ wissen muss.
   CSRF-Prüfung schlüge fehl.
 - Der Datenschutzhinweis (`/termin/datenschutz/`, #11) beschreibt nur, was
   der Code tut, und zieht Fristen aus den Einstellungen. Ändert sich, was
-  erhoben, gespeichert oder weitergegeben wird, den Text anpassen und
-  `APPOINTMENTS_PRIVACY_NOTICE_VERSION` erhöhen; die Version steht in jeder
+  erhoben, gespeichert oder weitergegeben wird, oder eine Frist, den Text
+  anpassen und `APPOINTMENTS_PRIVACY_NOTICE_VERSION` auf das neue Datum
+  setzen (ISO, die Seite zeigt es als Stand); die Version steht in jeder
   Anfrage. Gelb markierte Platzhalter hängen an Hosting und Mailanbieter (#10).
 
 ## appointments/mail.py

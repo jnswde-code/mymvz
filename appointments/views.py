@@ -63,8 +63,9 @@ def request_sent(request):
 def privacy_notice(request):
     """Privacy notice of the appointment pages (#11).
 
-    Deadlines come from the settings the code uses, so the text cannot drift
-    from them. The date shown is the version stored with every request.
+    Deadlines come from the settings the code uses. The date shown is the
+    version stored with every request, an ISO date; changing a deadline or
+    the text needs a new one.
     """
     return render(
         request,
