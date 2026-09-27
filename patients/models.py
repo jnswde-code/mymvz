@@ -391,11 +391,16 @@ def restriction_open(user, field: str = "pk", now=None) -> Q:
 
     The one definition (#39), for the patient pages and `records/access.py`:
     a release (`ConsentArea.RESTRICTED`) that counts today, or the user's own
-    emergency access that runs now.
+    emergency access that runs now; never the patient linked to the user.
     """
     now = now or timezone.now()
-    released = _released(user, timezone.localdate(now)).values("patient_id")
-    emergency = EmergencyAccess.objects.filter(running_at(now), user=user).values("patient_id")
+    # Never the user's own record, also not through a release or emergency
+    # access from before the account was linked.
+    released = _released(user, timezone.localdate(now)).exclude(patient__user=user)
+    emergency = EmergencyAccess.objects.filter(running_at(now), user=user).exclude(
+        patient__user=user
+    )
+    released, emergency = released.values("patient_id"), emergency.values("patient_id")
     return Q(**{f"{field}__in": released}) | Q(**{f"{field}__in": emergency})
 
 
