@@ -13,10 +13,12 @@ wissen muss.
 
 ## appointments/models.py
 
-- Stufe 1 hat keine Patiententabelle: Name, Geburtsdatum und Kontakt stehen
-  als Momentaufnahme in der Anfrage und werden mit ihr gelöscht (#5,
-  Entscheidung 1). Die Zuordnung zu `patients.Patient` macht später immer ein
-  Mensch.
+- Name, Geburtsdatum und Kontakt stehen als Momentaufnahme in der Anfrage
+  und werden mit ihr gelöscht (#5, Entscheidung 1). Die Spalte `patient` an
+  Anfrage und Termin ist optional und wird nur von Mitarbeitenden gesetzt
+  (`services.assign_patient`, #26); neue Termine übernehmen sie von der
+  Anfrage. `PROTECT`, damit das Löschen eines Patienten (K8) seine Termine
+  bedenken muss.
 - Die ganze Anfrage gilt als Art.-9-Datensatz, nicht nur Terminart und
   Notiz: Schon „Patient dieses MVZ“ kann bei Suchtmedizin eine
   Gesundheitsangabe sein (#5 Abschnitt 6).
