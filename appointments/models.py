@@ -222,6 +222,8 @@ class Reason(models.TextChoices):
 
 # What a patient may choose when cancelling via the link.
 PATIENT_CANCELLATION_REASONS = [Reason.NO_LONGER_FITS, Reason.TREATED_ELSEWHERE, Reason.OTHER]
+# What the team may choose when declining a request; each has its own mail text.
+DECLINE_REASONS = [Reason.PLEASE_CALL, Reason.NOT_BOOKABLE_ONLINE, Reason.OTHER]
 
 
 class Appointment(models.Model):

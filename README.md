@@ -12,8 +12,11 @@ Annehmen eines Vorschlags und Absagen. Ein Patientenstamm fürs Team unter
 `/patienten/` (Suche, Anlegen mit Dublettenhinweis, Kennungen, Verlauf der
 Stammdaten) und dazu die Akte mit Kontakten und Karteikarteneinträgen:
 Korrekturen legen neue Fassungen an, der Verlauf zeigt die Unterschiede,
-und die Datenbank verweigert Überschreiben und Löschen. Die Bearbeitung durch die Praxis
-(Backoffice) folgt mit #8, der Löschlauf mit #9.
+und die Datenbank verweigert Überschreiben und Löschen. Offene Terminanfragen
+sieht das Team unter `/anfragen/` (Ärztin/Arzt und MFA): mit Hinweisen wie
+„Telefon“ oder „ohne E-Mail – Rückruf nötig“, bestätigen, anderen Termin
+vorschlagen oder ablehnen, interne Notiz. Übertrag nach Medical Office,
+Absagen und Zuordnung zum Patienten folgen mit #42, der Löschlauf mit #9.
 
 ## Voraussetzungen
 

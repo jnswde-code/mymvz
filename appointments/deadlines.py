@@ -22,6 +22,20 @@ def add_working_days(moment: datetime, days: int) -> datetime:
     return timezone.make_aware(datetime.combine(day, local.time().replace(tzinfo=None)))
 
 
+def working_days_between(first, last) -> int:
+    """Working days (Mon–Fri) after `first` up to and including `last`; 0 if none.
+
+    A request from Friday counts 1 on Monday, one from Saturday also 1.
+    """
+    count = 0
+    day = first
+    while day < last:
+        day += timedelta(days=1)
+        if day.weekday() < 5:
+            count += 1
+    return count
+
+
 def days_later(moment: datetime, days: int) -> datetime:
     """Same local clock time `days` calendar days later (retention periods).
 

@@ -1,3 +1,4 @@
-{% autoescape off %}Ein Termin wurde über den Link in der E-Mail abgesagt. Näheres steht im Backoffice.
+{% autoescape off %}Ein Termin wurde über den Link in der E-Mail abgesagt. Näheres steht im Backoffice:
+{{ backoffice_url }}
 
 Diese E-Mail enthält bewusst keine Angaben zum Termin.{% endautoescape %}

@@ -49,6 +49,17 @@ wissen muss.
   Abschluss, gebucht 30 Tage nach Terminende, abgesagt 30 Tage nach der
   Absage, offen und mit laufendem Vorschlag keine. Termine bekommen in
   Stufe 1 dasselbe Datum wie ihre Anfrage.
+- Lesen fürs Team (`list_requests`, `get_request`) steht ebenfalls hier und
+  protokolliert selbst (`list` einmal je Liste, `view` je Anfrage), damit die
+  Sprachsteuerung (#16) dieselben Einträge erzeugt. Unbestätigte Anfragen
+  sieht das Team nie (`staff_visible`).
+- Ein Vorschlag an eine Anfrage ohne E-Mail wird abgewiesen: Niemand könnte
+  ihn annehmen, er verfiele still, und die Anfrage spränge zurück (#8,
+  Entscheidung 4). Das Team ruft an und bestätigt.
+- „für ein Kind“ heißt unter 18 am Tag der Anzeige in Europe/Berlin, nur ein
+  Hinweis für die Triage; „offen seit“ zählt Werktage ab der Bestätigung der
+  E-Mail bzw. der Anlage (#8, Entscheidungen 5 und 8); die offene Liste ist
+  danach sortiert.
 - `expire_overdue_requests` und `expire_overdue_proposals` sind die Läufe des
   Systems; aufrufen soll sie der Worker aus #9.
 - Ein abgelehnter, verfallener oder zurückgezogener Vorschlag setzt die
@@ -89,11 +100,30 @@ wissen muss.
   setzen (ISO, die Seite zeigt es als Stand); die Version steht in jeder
   Anfrage. Gelb markierte Platzhalter hängen an Hosting und Mailanbieter (#10).
 
+## appointments/staff_views.py, staff_forms.py, staff_urls.py
+
+- Die Seiten fürs Team unter `/anfragen/` liegen getrennt von denen für
+  Patienten: Dort braucht keine Ansicht eine Anmeldung, hier jede eine
+  Rolle. In einer gemeinsamen Datei reichte ein vergessener Decorator, und
+  eine Anfrage läge offen (#8).
+- Anfragen sehen und bearbeiten nur Ärztin/Arzt und MFA (#8,
+  Entscheidung 1): `view_appointmentrequest` für Liste und Ansicht,
+  `change_appointmentrequest` für jeden Schritt und die Notiz. Erst die
+  Rolle, dann liest und protokolliert der Service. Jeder Schritt ist POST;
+  `TransitionNotAllowed` (jemand anderes war schneller) wird zur Meldung.
+- Meldungen liegen im Cookie (Standard von Django) und tragen deshalb nie
+  Namen oder Telefonnummern; die stehen auf der Seite.
+- Den Block „Für Medical Office“ ordnet #19 nach der Eingabemaske; bis dahin
+  gilt die Reihenfolge der Anfrage.
+
 ## appointments/mail.py
 
 - In Mails nur Datum, Uhrzeit, Adresse, Kennung und Links. Nie Terminart,
   Notiz, Ärztin/Arzt oder Namen (#3 Abschnitt 2); ein Test schickt jede Mail
-  und sucht danach. Mails an die Praxis sagen nur, dass etwas geschehen ist.
+  und sucht danach. Mails an die Praxis sagen nur, dass etwas geschehen ist,
+  und verlinken die Liste, nie eine einzelne Anfrage.
+- Den Text der Ablehnung wählt nur der feste Grund aus dem Verlauf
+  (`DECLINE_REASONS`), nie ein Freitext des Teams (#3 Abschnitt 2).
 - `queue` merkt sich nur Art und IDs und sendet nach dem Commit; Text und
   Tokens entstehen erst in `send`. So kann #9 `send` in den Worker verlegen,
   ohne die Aufrufer zu ändern. In Tests deshalb `with commit():`

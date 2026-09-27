@@ -71,7 +71,8 @@ paths:
   Berufe lesen sie nur (#23 Abschnitt 5.1, #26, Migration `0003`). Die
   Karteikarte lesen und schreiben bis K2.2 nur Ärztinnen/Ärzte und MFA
   (#37, Migration `0004`); was die Rechte bedeuten und die Prüfung je
-  Datensatz stehen in `records/access.py`, nicht hier.
+  Datensatz stehen in `records/access.py`, nicht hier. Terminanfragen sehen
+  und bearbeiten nur Ärztinnen/Ärzte und MFA (#8, Migration `0005`).
 
 ## accounts/management/commands/
 
