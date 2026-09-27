@@ -3,9 +3,10 @@
 Every change runs in one transaction with its `PatientHistory` rows and its
 access log entry. Views, the backoffice (#8) and later voice control (#16)
 call these functions; nothing else writes `Patient`, `PatientIdentifier`,
-`CareTeamMember` or `ConsentToShare`.
+`CareTeamMember`, `ConsentToShare` or `EmergencyAccess`.
 Role checks stay in the views; these functions only require a logged-in
-account.
+account. The one exception is the emergency access, which only doctors may
+open whoever calls (#39).
 """
 
 import re
@@ -13,19 +14,23 @@ import unicodedata
 from datetime import date, datetime
 from difflib import SequenceMatcher
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Prefetch, Q
 from django.utils import timezone
 
 from audit.log import log_access
 from patients.models import (
+    EMERGENCY_ACCESS_DURATION,
     CareTeamMember,
     ConsentArea,
     ConsentToShare,
+    EmergencyAccess,
     IdentifierSystem,
     Patient,
     PatientHistory,
+    restriction_open,
+    running_at,
 )
 from patients.models import PatientIdentifier as Identifier
 
@@ -132,9 +137,14 @@ def update_patient(patient: Patient, data: dict, *, actor) -> list[str]:
     """Change master data; one history row per changed field. Returns the changed fields."""
     _require_staff(actor)
     patient = Patient.objects.select_for_update().get(pk=patient.pk)
+    return _change(patient, _only_master_data(data), actor=actor)
+
+
+def _change(patient: Patient, data: dict, *, actor) -> list[str]:
+    """Set fields of a locked patient, with one history row per changed field and a log entry."""
     now = timezone.now()
     changed = []
-    for field, new in _only_master_data(data).items():
+    for field, new in data.items():
         old = getattr(patient, field)
         if old == new:
             continue
@@ -157,6 +167,104 @@ def update_patient(patient: Patient, data: dict, *, actor) -> list[str]:
     )
     log_access(actor, "update", patient, patient_id=patient.pk)
     return [field for field, _, _ in changed]
+
+
+# --- Restriction and staff as patients (#39) ---------------------------------
+
+
+@transaction.atomic
+def set_restriction(patient: Patient, *, actor) -> Patient:
+    """Set the restriction; from now on only released persons see the patient."""
+    _require_staff(actor)
+    patient = Patient.objects.select_for_update().get(pk=patient.pk)
+    if patient.is_restricted:
+        raise ValidationError("Der Sperrvermerk ist schon gesetzt.")
+    _change(patient, {"is_restricted": True}, actor=actor)
+    return patient
+
+
+@transaction.atomic
+def lift_restriction(patient: Patient, *, actor) -> Patient:
+    """Lift the restriction (doctors only, checked by the view); history and log keep who."""
+    _require_staff(actor)
+    patient = Patient.objects.select_for_update().get(pk=patient.pk)
+    if not patient.is_restricted:
+        raise ValidationError("Es gibt keinen Sperrvermerk.")
+    _change(patient, {"is_restricted": False}, actor=actor)
+    return patient
+
+
+@transaction.atomic
+def link_account(patient: Patient, user, *, actor) -> Patient:
+    """Link a staff account to the patient; this sets the restriction too (#23 decision 8)."""
+    _require_staff(actor)
+    patient = Patient.objects.select_for_update().get(pk=patient.pk)
+    if patient.user_id is not None:
+        raise ValidationError("Der Patient ist schon mit einem Konto verknüpft.")
+    if Patient.objects.filter(user=user).exists():
+        raise ValidationError({"user": "Dieses Konto ist schon mit einem Patienten verknüpft."})
+    try:
+        # A parallel link of the same account to another patient only the
+        # unique constraint sees.
+        with transaction.atomic():
+            _change(patient, {"user": user, "is_restricted": True}, actor=actor)
+    except IntegrityError:
+        raise ValidationError(
+            {"user": "Dieses Konto ist schon mit einem Patienten verknüpft."}
+        ) from None
+    return patient
+
+
+@transaction.atomic
+def unlink_account(patient: Patient, *, actor) -> Patient:
+    """Remove a wrong link. The restriction stays; lifting it is a decision of its own."""
+    _require_staff(actor)
+    patient = Patient.objects.select_for_update().get(pk=patient.pk)
+    if patient.user_id is None:
+        raise ValidationError("Der Patient ist mit keinem Konto verknüpft.")
+    _change(patient, {"user": None}, actor=actor)
+    return patient
+
+
+EMERGENCY_PERMISSION = "patients.add_emergencyaccess"
+
+
+@transaction.atomic
+def open_emergency_access(patient: Patient, *, reason: str, actor) -> EmergencyAccess:
+    """Open the restriction of this patient to a doctor for 60 minutes (#27 question 5, #39).
+
+    The reason is required and kept only in `EmergencyAccess`; the log gets
+    an entry `emergency_access` without it. While one runs, it is not
+    opened again, so every hour of access has its own reason.
+    """
+    _require_staff(actor)
+    if not (actor.is_active and actor.has_perm(EMERGENCY_PERMISSION)):
+        raise PermissionDenied
+    reason = reason.strip()
+    if not reason:
+        raise ValidationError({"reason": "Bitte den Grund für den Notfallzugriff angeben."})
+    # Lock the patient so a double click does not open two accesses.
+    patient = Patient.objects.select_for_update().get(pk=patient.pk)
+    if patient.user_id == actor.pk:
+        raise PermissionDenied("Die eigene Akte öffnet kein Notfallzugriff.")
+    now = timezone.now()
+    running = EmergencyAccess.objects.filter(running_at(now), patient=patient, user=actor).first()
+    if running is not None:
+        until = timezone.localtime(running.valid_until)
+        raise ValidationError(f"Ein Notfallzugriff gilt schon bis {until:%H:%M} Uhr.")
+    if Patient.objects.filter(restriction_open(actor, now=now), pk=patient.pk).exists():
+        raise ValidationError("Sie sind für diesen Patienten freigegeben; es ist nichts zu öffnen.")
+    emergency = EmergencyAccess(
+        patient=patient,
+        user=actor,
+        reason=reason,
+        valid_from=now,
+        valid_until=now + EMERGENCY_ACCESS_DURATION,
+    )
+    emergency.full_clean()
+    emergency.save()
+    log_access(actor, "emergency_access", emergency, patient_id=patient.pk)
+    return emergency
 
 
 # --- Identifiers -------------------------------------------------------------
@@ -265,6 +373,13 @@ def end_care_team_member(member: CareTeamMember, *, actor, on: date | None = Non
 # The one right a named person needs besides the consent; `records/access.py`
 # checks it, and the care team, again on every read.
 CHART_PERMISSION = "records.view_chartentry"
+# A release of the restriction opens the master data first; the chart only
+# for those who have it anyway (#39).
+PATIENT_PERMISSION = "patients.view_patient"
+
+
+def consent_permission(area: str) -> str:
+    return PATIENT_PERMISSION if area == ConsentArea.RESTRICTED else CHART_PERMISSION
 
 
 @transaction.atomic
@@ -281,8 +396,11 @@ def grant_consent(
         raise ValidationError({"area": "Unbekannter Bereich."})
     if user.pk == actor.pk:
         raise ValidationError({"user": "Eine Freigabe für sich selbst ist nicht möglich."})
-    if not user.is_active or not user.has_perm(CHART_PERMISSION):
-        raise ValidationError({"user": "Dieses Konto hat keinen Zugang zur Akte."})
+    if user.pk == patient.user_id:
+        # Staff as patients: nobody opens their own record (#39).
+        raise ValidationError({"user": "Das ist das Konto des Patienten selbst."})
+    if not user.is_active or not user.has_perm(consent_permission(area)):
+        raise ValidationError({"user": "Dieses Konto hat keinen Zugang zu diesem Bereich."})
     today = timezone.localdate()
     if valid_until is not None and valid_until <= today:
         raise ValidationError({"valid_until": "Das Ende muss nach heute liegen."})

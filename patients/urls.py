@@ -27,4 +27,13 @@ urlpatterns = [
         views.end_consent_view,
         name="end_consent",
     ),
+    path("patienten/<uuid:pk>/sperrvermerk/", views.restrict_view, name="restrict"),
+    path(
+        "patienten/<uuid:pk>/sperrvermerk/aufheben/",
+        views.lift_restriction_view,
+        name="lift_restriction",
+    ),
+    path("patienten/<uuid:pk>/konto/", views.link_account_view, name="link_account"),
+    path("patienten/<uuid:pk>/konto/entfernen/", views.unlink_account_view, name="unlink_account"),
+    path("patienten/<uuid:pk>/notfall/", views.emergency_view, name="emergency"),
 ]

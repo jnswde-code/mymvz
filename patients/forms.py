@@ -4,8 +4,8 @@ from django import forms
 from django.contrib.auth import get_user_model
 
 from accounts.roles import CARE_TEAM_ROLES
-from patients.models import ConsentArea, IdentifierSystem, Patient
-from patients.services import CHART_PERMISSION, MASTER_DATA_FIELDS, name_terms
+from patients.models import EMERGENCY_ACCESS_MINUTES, ConsentArea, IdentifierSystem, Patient
+from patients.services import MASTER_DATA_FIELDS, PATIENT_PERMISSION, name_terms
 
 
 class DateInput(forms.DateInput):
@@ -92,12 +92,41 @@ class ConsentForm(forms.Form):
         help_text="ab diesem Tag ohne Freigabe; leer: bis sie beendet wird",
     )
 
-    def __init__(self, *args, actor, **kwargs):
+    def __init__(self, *args, actor, areas=None, **kwargs):
         super().__init__(*args, **kwargs)
-        # Active accounts with the chart right; `services.grant_consent` checks again.
+        if areas is not None:
+            self.fields["area"].choices = [c for c in ConsentArea.choices if c[0] in areas]
+        # Active accounts that see patients at all; `services.grant_consent`
+        # checks the right the area needs.
         self.fields["user"].queryset = (
             get_user_model()
-            .objects.with_perm(CHART_PERMISSION)
+            .objects.with_perm(PATIENT_PERMISSION)
             .exclude(pk=actor.pk)
             .order_by("last_name", "first_name", "username")
         )
+
+
+class LinkAccountForm(forms.Form):
+    """Staff as patients (#39): active accounts not linked to a patient yet."""
+
+    user = AccountChoiceField(label="Konto", queryset=get_user_model().objects.none())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["user"].queryset = (
+            get_user_model()
+            .objects.filter(is_active=True, patient__isnull=True)
+            .order_by("last_name", "first_name", "username")
+        )
+
+
+class EmergencyAccessForm(forms.Form):
+    reason = forms.CharField(
+        label="Grund",
+        max_length=500,
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text=(
+            "Pflicht, kurz und ohne Befunde: Ihn sehen die Verwaltung und die "
+            f"freigegebenen Personen. Der Zugriff gilt {EMERGENCY_ACCESS_MINUTES} Minuten."
+        ),
+    )

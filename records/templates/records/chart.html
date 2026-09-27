@@ -13,6 +13,12 @@
     {% endif %}
   </p>
 
+  {% if patient.is_restricted %}<p><strong>Sperrvermerk:</strong> nur für freigegebene Personen.</p>{% endif %}
+  {% include "patients/_emergency_notices.html" %}
+  {% if hidden_restricted and perms.patients.add_emergencyaccess %}
+    <p><small>Einträge mit Sperrvermerk öffnet ein <a href="{% url 'patients:emergency' patient.pk %}">Notfallzugriff mit Grund</a> ({{ emergency_minutes }} Minuten, protokolliert).</small></p>
+  {% endif %}
+
   <h2>Kontakte</h2>
   {% for encounter in encounters %}
     <section>

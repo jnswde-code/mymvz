@@ -4,6 +4,7 @@
 
 {% block content %}
   <h1>Zugriffsprotokoll</h1>
+  {% if perms.patients.view_emergencyaccess %}<p><a href="{% url 'audit:emergency_list' %}">Notfallzugriffe mit Grund</a></p>{% endif %}
   <table>
     <thead>
       <tr><th>Zeit</th><th>Konto</th><th>Aktion</th><th>Typ</th><th>ID</th><th>Patient-ID</th><th>Treffer</th></tr>

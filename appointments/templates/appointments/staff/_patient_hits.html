@@ -3,7 +3,7 @@
   <tbody>
     {% for patient in hits %}
       <tr>
-        <td><a href="{% url 'patients:detail' patient.pk %}">{{ patient.family_name }}, {{ patient.given_name }}</a>{% if patient.birth_name %} (geb. {{ patient.birth_name }}){% endif %}{% if not patient.is_active %} (inaktiv){% endif %}</td>
+        <td><a href="{% url 'patients:detail' patient.pk %}">{{ patient.family_name }}, {{ patient.given_name }}</a>{% if patient.is_restricted %} (Sperrvermerk){% elif patient.birth_name %} (geb. {{ patient.birth_name }}){% endif %}{% if not patient.is_active %} (inaktiv){% endif %}</td>
         <td>{{ patient.date_of_birth|date:"d.m.Y" }}</td>
         <td>
           {% if perms.appointments.change_appointmentrequest %}

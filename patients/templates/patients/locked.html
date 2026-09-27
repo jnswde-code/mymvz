@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Sperrvermerk – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  <h1>{{ patient.family_name }}, {{ patient.given_name }} ({{ patient.date_of_birth|date:"d.m.Y" }})</h1>
+  <p><strong>Sperrvermerk.</strong> Stammdaten und Akte sehen nur namentlich freigegebene Personen.</p>
+
+  {% if perms.patients.add_emergencyaccess %}
+    <h2>Notfallzugriff</h2>
+    <p>Öffnet den Patienten für {{ emergency_minutes }} Minuten. Der Zugriff wird mit Grund protokolliert und der Verwaltung sowie den freigegebenen Personen angezeigt. Aufheben lässt sich der Sperrvermerk nur bei geöffnetem Patienten.</p>
+    <p><a href="{% url 'patients:emergency' patient.pk %}">Notfallzugriff mit Grund öffnen</a></p>
+  {% endif %}
+
+  {% if releases is not None %}
+    <h2>Freigegebene Personen</h2>
+    <ul>
+      {% for consent in releases %}
+        <li>
+          {{ consent.user.get_full_name|default:consent.user.get_username }}
+          {% if not consent.is_in_force %}(abgelaufen)
+          {% elif perms.patients.change_consenttoshare %}
+            <form method="post" action="{% url 'patients:end_consent' patient.pk consent.pk %}" style="display:inline">
+              {% csrf_token %}<button type="submit">beenden</button>
+            </form>
+          {% endif %}
+        </li>
+      {% empty %}
+        <li>niemand</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if consent_form %}
+    <h3>Person freigeben</h3>
+    <p><small>Nur für eine andere Person, nie für sich selbst. Wird protokolliert.</small></p>
+    <form method="post" action="{% url 'patients:add_consent' patient.pk %}">
+      {% csrf_token %}
+      {{ consent_form.as_p }}
+      <button type="submit">Freigabe eintragen</button>
+    </form>
+  {% endif %}
+
+  {% if patient.user_id and perms.patients.link_account %}
+    <form method="post" action="{% url 'patients:unlink_account' patient.pk %}">
+      {% csrf_token %}<button type="submit">Verknüpfung mit dem Konto entfernen (Sperrvermerk bleibt)</button>
+    </form>
+  {% endif %}
+{% endblock %}
