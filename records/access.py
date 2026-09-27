@@ -163,7 +163,13 @@ def changeable(user, records) -> set:
     # entries may keep their own contacts right.
     if model is not Encounter:
         candidates = candidates.filter(sensitivity__in=writable_sensitivities(user))
-    if not user.has_perm(CHANGE_ANY):
-        own = model.objects.filter(lineage_id=OuterRef("lineage_id"), version=1, recorded_by=user)
-        candidates = candidates.filter(Exists(own))
+    own = Q(
+        Exists(model.objects.filter(lineage_id=OuterRef("lineage_id"), version=1, recorded_by=user))
+    )
+    if user.has_perm(CHANGE_ANY):
+        # A consent opens psychotherapy for reading only; someone else's
+        # notes stay the treating person's to correct.
+        candidates = candidates.filter(~Q(sensitivity=Sensitivity.PSYCHOTHERAPY) | own)
+    else:
+        candidates = candidates.filter(own)
     return set(candidates.values_list("lineage_id", flat=True))

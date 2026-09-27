@@ -107,7 +107,8 @@ K2.3 (#39) bringt Sperrvermerk und Notfallzugriff.
   Lesen und Schreiben auseinanderfallen: Psychologie liest `normal`,
   schreibt aber nur `psychotherapy`. Korrigieren und als Irrtum markieren
   dürfen Autor und Ärztinnen/Ärzte (#27, Frage 2), jeweils nur, was sie
-  sehen und dessen Stufe sie schreiben. Kontakte sind der Rahmen für alle
+  sehen und dessen Stufe sie schreiben; fremde Psychotherapie-Notizen nur
+  der Autor, denn eine Freigabe öffnet nur zum Lesen. Kontakte sind der Rahmen für alle
   Stufen und haben selbst immer `normal`.
 - Platzhalter (`hidden_entries`): aktive Einträge, die der Nutzer nicht
   lesen darf, nur als Zahl je Kontakt („n Einträge mit
