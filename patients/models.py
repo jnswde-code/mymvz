@@ -9,6 +9,7 @@ when. All changes go through `patients.services`.
 import uuid
 
 from django.conf import settings
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
@@ -151,6 +152,31 @@ class PatientHistory(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValueError("Verlaufseinträge werden nur mit dem Patienten gelöscht.")
+
+    # German labels for the history table; the stored values stay codes.
+    @property
+    def field_label(self) -> str:
+        system = self.field.removeprefix("identifier:")
+        if system != self.field:
+            label = IdentifierSystem(system).label if system in IdentifierSystem.values else system
+            return f"Kennung: {label}"
+        try:
+            return Patient._meta.get_field(self.field).verbose_name
+        except FieldDoesNotExist:
+            return self.field
+
+    def _display(self, value: str) -> str:
+        if self.field == "sex" and value in Sex.values:
+            return Sex(value).label
+        return value
+
+    @property
+    def old_display(self) -> str:
+        return self._display(self.old_value)
+
+    @property
+    def new_display(self) -> str:
+        return self._display(self.new_value)
 
 
 class CareTeamMember(models.Model):

@@ -39,6 +39,8 @@ STREETS = ("Musterweg", "Beispielstraße", "Probegasse", "Testallee")
 CITY = "Beispielstadt"
 POSTAL_CODE = "00000"
 EMAIL_DOMAIN = "example.org"
+# Bundesnetzagentur range reserved for film and fiction, never assigned.
+PHONE_PREFIX = "030 23125"
 # Medical Office numbers of demo patients start here, far from real ones.
 DEMO_NUMBER_START = 900_000
 
@@ -70,7 +72,7 @@ class Command(BaseCommand):
                 street=f"{rng.choice(STREETS)} {rng.randint(1, 99)}",
                 postal_code=POSTAL_CODE,
                 city=CITY,
-                phone=f"0151 0000{rng.randrange(10_000):04d}",
+                phone=f"{PHONE_PREFIX}{rng.randrange(1_000):03d}",
                 email=f"{given}.{family}.{next_number + i}@{EMAIL_DOMAIN}".lower(),
             )
             PatientIdentifier.objects.create(

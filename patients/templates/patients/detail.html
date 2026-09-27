@@ -54,9 +54,9 @@
           <tr>
             <td>{{ entry.changed_at|date:"d.m.Y H:i" }}</td>
             <td>{{ entry.changed_by.get_username }}</td>
-            <td>{{ entry.field }}</td>
-            <td>{{ entry.old_value }}</td>
-            <td>{{ entry.new_value }}</td>
+            <td>{{ entry.field_label }}</td>
+            <td>{{ entry.old_display }}</td>
+            <td>{{ entry.new_display }}</td>
           </tr>
         {% endfor %}
       </tbody>

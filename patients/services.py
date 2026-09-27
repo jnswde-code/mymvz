@@ -13,8 +13,8 @@ from datetime import date, datetime
 from difflib import SequenceMatcher
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
-from django.db.models import Q
+from django.db import IntegrityError, transaction
+from django.db.models import Prefetch, Q
 from django.utils import timezone
 
 from audit.log import log_access
@@ -48,6 +48,12 @@ MIN_CONTAINED_LENGTH = 4
 
 # Letter, nine digits; the last digit is a check digit we do not verify yet.
 KVNR_PATTERN = re.compile(r"[A-Z][0-9]{9}")
+# Name search splits on spaces and commas ("Muster, Erika").
+NAME_SEPARATORS = re.compile(r"[\s,]+")
+
+
+def name_terms(name: str) -> list[str]:
+    return [t for t in NAME_SEPARATORS.split(name) if t]
 
 
 def _require_staff(actor):
@@ -173,7 +179,13 @@ def add_identifier(patient: Patient, system: str, value: str, *, actor) -> Ident
         raise ValidationError({"system": "Es gibt schon eine gültige Nummer dieser Art."})
     if Identifier.objects.filter(system=system, value=value).exists():
         raise ValidationError({"value": "Diese Nummer ist schon vergeben."})
-    identifier = Identifier.objects.create(patient=patient, system=system, value=value)
+    try:
+        # The checks above cannot see a parallel insert for another patient;
+        # the constraints can.
+        with transaction.atomic():
+            identifier = Identifier.objects.create(patient=patient, system=system, value=value)
+    except IntegrityError:
+        raise ValidationError({"value": "Diese Nummer ist schon vergeben."}) from None
     PatientHistory.objects.create(
         patient=patient, field=f"identifier:{system}", new_value=value, changed_by=actor
     )
@@ -211,6 +223,8 @@ def add_care_team_member(patient: Patient, user, *, actor) -> CareTeamMember:
     _require_staff(actor)
     if not user.is_active:
         raise ValidationError("Deaktivierte Konten gehören zu keinem Behandlungsteam.")
+    # Lock the patient so two parallel adds of the same account wait for each other.
+    patient = Patient.objects.select_for_update().get(pk=patient.pk)
     if CareTeamMember.objects.filter(patient=patient, user=user, valid_until=None).exists():
         raise ValidationError("Das Konto gehört schon zum Behandlungsteam.")
     member = CareTeamMember.objects.create(patient=patient, user=user)
@@ -240,7 +254,8 @@ _UMLAUTS = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"})
 
 def normalize_name(name: str) -> str:
     """Lower case, umlauts spelled out, accents, spaces and hyphens dropped."""
-    name = name.casefold().translate(_UMLAUTS)
+    # NFC first, so a decomposed "ü" (pasted from macOS) also becomes "ue".
+    name = unicodedata.normalize("NFC", name).casefold().translate(_UMLAUTS)
     name = unicodedata.normalize("NFKD", name)
     return "".join(c for c in name if c.isalpha())
 
@@ -288,7 +303,7 @@ def search_patients(
     Ended numbers are found too: a letter may carry an old one.
     """
     _require_staff(actor)
-    terms = [t for t in re.split(r"[\s,]+", name) if t]
+    terms = name_terms(name)
     identifier = identifier.strip()
     if not terms and date_of_birth is None and not identifier:
         raise ValueError("Suche ohne Suchbegriff.")
@@ -306,6 +321,10 @@ def search_patients(
         patients = patients.filter(
             Q(identifiers__value__iexact=identifier) | Q(identifiers__value__iexact=compact)
         ).distinct()
+    current = Identifier.objects.filter(valid_until__isnull=True)
+    patients = patients.prefetch_related(
+        Prefetch("identifiers", queryset=current, to_attr="current_identifier_list")
+    )
     hits = list(patients[:SEARCH_LIMIT])
     log_access(actor, "search", Patient, result_count=len(hits))
     return hits

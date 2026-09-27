@@ -3,7 +3,7 @@
 from django import forms
 
 from patients.models import IdentifierSystem, Patient
-from patients.services import MASTER_DATA_FIELDS
+from patients.services import MASTER_DATA_FIELDS, name_terms
 
 
 class DateInput(forms.DateInput):
@@ -45,7 +45,9 @@ class SearchForm(forms.Form):
     def clean(self):
         data = super().clean()
         if not (
-            data.get("name", "").strip() or data.get("date_of_birth") or data.get("identifier")
+            name_terms(data.get("name", ""))
+            or data.get("date_of_birth")
+            or data.get("identifier", "").strip()
         ):
             raise forms.ValidationError("Bitte Name, Geburtsdatum oder Nummer angeben.")
         return data

@@ -59,5 +59,7 @@ beim Ändern wissen muss.
 
 - Läuft nur mit `DATA_MODE=synthetic`. Nachnamen sind erkennbar keine echten
   („Beispiel“, „Muster“ …), PLZ `00000`, Mail unter `example.org`,
+  Telefon aus dem Bereich `030 23125…`, den die Bundesnetzagentur für
+  Filme und Fiktion freihält,
   Medical-Office-Nummern ab 900000. So entsteht keine realistische
   Kombination aus Name, Geburtsdatum und Anschrift (DSGVO Art. 9, #3).
