@@ -4,7 +4,7 @@
 
 {% block content %}
   <h1>Notfallzugriff: {{ patient.family_name }}, {{ patient.given_name }} ({{ patient.date_of_birth|date:"d.m.Y" }})</h1>
-  <p>Öffnet für 60 Minuten, was ein Sperrvermerk verschließt: Stammdaten, Akte und Einträge mit Sperrvermerk. Psychotherapie bleibt geschlossen.</p>
+  <p>Öffnet für {{ emergency_minutes }} Minuten, was ein Sperrvermerk verschließt: Stammdaten, Akte und Einträge mit Sperrvermerk. Psychotherapie bleibt geschlossen.</p>
   <form method="post">
     {% csrf_token %}
     {{ form.as_p }}

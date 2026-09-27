@@ -4,7 +4,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 
 from accounts.roles import CARE_TEAM_ROLES
-from patients.models import ConsentArea, IdentifierSystem, Patient
+from patients.models import EMERGENCY_ACCESS_MINUTES, ConsentArea, IdentifierSystem, Patient
 from patients.services import MASTER_DATA_FIELDS, PATIENT_PERMISSION, name_terms
 
 
@@ -127,6 +127,6 @@ class EmergencyAccessForm(forms.Form):
         widget=forms.Textarea(attrs={"rows": 3}),
         help_text=(
             "Pflicht, kurz und ohne Befunde: Ihn sehen die Verwaltung und die "
-            "freigegebenen Personen. Der Zugriff gilt 60 Minuten."
+            f"freigegebenen Personen. Der Zugriff gilt {EMERGENCY_ACCESS_MINUTES} Minuten."
         ),
     )

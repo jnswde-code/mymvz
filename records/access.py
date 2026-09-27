@@ -117,8 +117,11 @@ def _own(user, model) -> Q:
     )
 
 
-def _levels(user, model, now) -> Q:
-    """The protection levels the user may read, as a filter on `model`."""
+def _levels(user, model, now, released) -> Q:
+    """The protection levels the user may read, as a filter on `model`.
+
+    `released`: the patients whose restriction is open to the user.
+    """
     day = timezone.localdate(now)
     allowed = Q(sensitivity=Sensitivity.NORMAL)
     addiction = Q(sensitivity=Sensitivity.ADDICTION)
@@ -129,7 +132,6 @@ def _levels(user, model, now) -> Q:
         shared |= _own(user, model)
     psychotherapy = Q(sensitivity=Sensitivity.PSYCHOTHERAPY) & shared
     # An emergency access opens restricted entries too, psychotherapy never.
-    released = restriction_open(user, "patient_id", now)
     if user.has_perm(WRITE_LEVEL[Sensitivity.RESTRICTED]):
         released |= _own(user, model)
     restricted = Q(sensitivity=Sensitivity.RESTRICTED) & released
@@ -145,12 +147,11 @@ def visible_to(user, queryset, *, include_errors: bool = False):
     if not has_chart_role(user):
         return queryset.none()
     now = timezone.now()
-    visible = queryset.filter(
-        Q(patient__is_restricted=False) | restriction_open(user, "patient_id", now)
-    )
+    released = restriction_open(user, "patient_id", now)
+    visible = queryset.filter(Q(patient__is_restricted=False) | released)
     if not user.has_perm(ALL_PATIENTS):
         visible = visible.filter(patient_id__in=_team_patients(user, timezone.localdate(now)))
-    visible = visible.filter(_levels(user, queryset.model, now))
+    visible = visible.filter(_levels(user, queryset.model, now, released))
     if not (include_errors and can_view_errors(user)):
         in_error = queryset.model.objects.filter(
             lineage_id=OuterRef("lineage_id"), status=Status.ENTERED_IN_ERROR
@@ -174,6 +175,18 @@ def hidden_entries(user, patient) -> dict:
     hidden = heads.exclude(pk__in=visible_to(user, heads).values("pk"))
     counts = hidden.order_by().values("encounter_lineage_id").annotate(n=Count("pk"))
     return {row["encounter_lineage_id"]: row["n"] for row in counts}
+
+
+def hides_restricted(user, patient) -> bool:
+    """Some active entry with the level `restricted` is hidden from the user.
+
+    Only these an emergency access would open (#39), so only then the chart
+    offers it; psychotherapy stays closed either way.
+    """
+    heads = ChartEntry.objects.filter(
+        patient=patient, status=Status.ACTIVE, sensitivity=Sensitivity.RESTRICTED
+    )
+    return heads.exclude(pk__in=visible_to(user, heads).values("pk")).exists()
 
 
 def can_change(user, record) -> bool:

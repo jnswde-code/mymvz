@@ -325,7 +325,8 @@ class ConsentToShare(_ValidFromUntil, models.Model):
 
 # How long one emergency access opens a patient (#27, question 5); after
 # that a new reason is needed.
-EMERGENCY_ACCESS_DURATION = timedelta(minutes=60)
+EMERGENCY_ACCESS_MINUTES = 60
+EMERGENCY_ACCESS_DURATION = timedelta(minutes=EMERGENCY_ACCESS_MINUTES)
 
 
 class EmergencyAccess(models.Model):
@@ -374,9 +375,10 @@ class EmergencyAccess(models.Model):
     def delete(self, *args, **kwargs):
         raise ValueError("Notfallzugriffe werden nur mit dem Patienten gelöscht.")
 
-    @property
-    def is_running(self) -> bool:
-        return self.valid_from <= timezone.now() < self.valid_until
+
+def _released(user, day):
+    """Releases of the restriction to `user` that count on `day`."""
+    return ConsentToShare.objects.filter(valid_on(day), user=user, area=ConsentArea.RESTRICTED)
 
 
 def running_at(now) -> Q:
@@ -392,9 +394,7 @@ def restriction_open(user, field: str = "pk", now=None) -> Q:
     emergency access that runs now.
     """
     now = now or timezone.now()
-    released = ConsentToShare.objects.filter(
-        valid_on(timezone.localdate(now)), user=user, area=ConsentArea.RESTRICTED
-    ).values("patient_id")
+    released = _released(user, timezone.localdate(now)).values("patient_id")
     emergency = EmergencyAccess.objects.filter(running_at(now), user=user).values("patient_id")
     return Q(**{f"{field}__in": released}) | Q(**{f"{field}__in": emergency})
 
@@ -412,9 +412,6 @@ def emergency_notices(user, patient):
     Released persons learn who opened the patient in an emergency, when and
     why, so misuse does not stay unnoticed.
     """
-    released = ConsentToShare.objects.filter(
-        valid_on(timezone.localdate()), user=user, patient=patient, area=ConsentArea.RESTRICTED
-    ).exists()
-    if not released:
+    if not _released(user, timezone.localdate()).filter(patient=patient).exists():
         return EmergencyAccess.objects.none()
     return patient.emergency_accesses.select_related("user")

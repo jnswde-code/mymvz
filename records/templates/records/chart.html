@@ -14,17 +14,9 @@
   </p>
 
   {% if patient.is_restricted %}<p><strong>Sperrvermerk:</strong> nur für freigegebene Personen.</p>{% endif %}
-  {% if emergency_notices %}
-    <h2>Notfallzugriffe</h2>
-    <p><small>Sie sind für diesen Patienten freigegeben und sehen deshalb, wer ihn im Notfall geöffnet hat.</small></p>
-    <ul>
-      {% for emergency in emergency_notices %}
-        <li>{{ emergency.valid_from|date:"d.m.Y H:i" }} von {{ emergency.user.get_full_name|default:emergency.user.get_username }}: {{ emergency.reason }}</li>
-      {% endfor %}
-    </ul>
-  {% endif %}
-  {% if perms.patients.add_emergencyaccess and has_hidden %}
-    <p><small>Einträge mit Sperrvermerk öffnet ein <a href="{% url 'patients:emergency' patient.pk %}">Notfallzugriff mit Grund</a> (60 Minuten, protokolliert); Psychotherapie bleibt geschlossen.</small></p>
+  {% include "patients/_emergency_notices.html" %}
+  {% if hidden_restricted and perms.patients.add_emergencyaccess %}
+    <p><small>Einträge mit Sperrvermerk öffnet ein <a href="{% url 'patients:emergency' patient.pk %}">Notfallzugriff mit Grund</a> ({{ emergency_minutes }} Minuten, protokolliert).</small></p>
   {% endif %}
 
   <h2>Kontakte</h2>

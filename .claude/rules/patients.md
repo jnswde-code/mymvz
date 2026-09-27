@@ -93,15 +93,25 @@ beim Ändern wissen muss.
   pflegen Ärztinnen/Ärzte (#38).
 - Sperrvermerk (#39): Wer nicht freigegeben ist, bekommt auf jeder Seite
   des Patienten 403; die Stammdatenseite zeigt dann nur Name und
-  Geburtsdatum (wie die Suche) mit Notfallzugriff, Freigabe und Aufheben
-  für Ärztinnen/Ärzte. So kann eine nicht freigegebene Ärztin eine andere
-  Person freigeben, aber nie sich selbst (vier Augen). Setzen, Aufheben
-  und Verknüpfen verraten nichts und gehen deshalb auch am gesperrten
-  Patienten. Die Suche findet gesperrte Patienten mit Markierung, ohne
-  Nummern, damit niemand eine Dublette anlegt.
+  Geburtsdatum (wie die Suche) mit Notfallzugriff und Freigaben für
+  Ärztinnen/Ärzte. So kann eine nicht freigegebene Ärztin eine andere
+  Person freigeben oder eine Freigabe beenden, aber nie sich selbst
+  freigeben (vier Augen). Setzen, Verknüpfen und Entfernen der Verknüpfung
+  verraten nichts und gehen deshalb auch am gesperrten Patienten. Die
+  Sperrseite schreibt keinen Protokolleintrag: Sie zeigt nur, was auch die
+  Suche zeigt. Suche, Dublettenhinweis und Zuordnung von Anfragen zeigen
+  gesperrte Patienten mit Markierung, ohne Nummern und Geburtsnamen, damit
+  niemand eine Dublette anlegt.
 - Rechte (#27, Frage 6): Ärztinnen/Ärzte setzen, geben frei, heben auf und
   öffnen im Notfall; die Verwaltung setzt nur, verknüpft Konten und liest
-  die Liste der Notfallzugriffe.
+  die Liste der Notfallzugriffe. Verknüpfen darf nur die Verwaltung, weil
+  die Kontenliste die schon verknüpften auslässt und damit verrät, wer im
+  Team Patient ist.
+- Aufheben geht nur am offenen Patienten (freigegeben oder nach
+  Notfallzugriff), sonst wäre es ein Weg am Pflichtgrund vorbei. Das Konto
+  des Patienten selbst lässt sich nicht freigeben und öffnet ihn nicht per
+  Notfallzugriff. Einen Notfallzugriff gibt es nur, wenn etwas zu ist:
+  nicht bei laufendem Zugriff, nicht bei bestehender Freigabe.
 - Beim Anlegen läuft die Dublettenprüfung vor dem Speichern. Die Bestätigung
   „andere Person“ gilt nur für die angezeigten Treffer (`duplicates_seen`);
   kommt nach einer Änderung der Eingabe ein neuer Treffer dazu, fragt die

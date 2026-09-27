@@ -29,6 +29,7 @@ from patients.models import (
     IdentifierSystem,
     Patient,
     PatientHistory,
+    restriction_open,
     running_at,
 )
 from patients.models import PatientIdentifier as Identifier
@@ -244,11 +245,15 @@ def open_emergency_access(patient: Patient, *, reason: str, actor) -> EmergencyA
         raise ValidationError({"reason": "Bitte den Grund für den Notfallzugriff angeben."})
     # Lock the patient so a double click does not open two accesses.
     patient = Patient.objects.select_for_update().get(pk=patient.pk)
+    if patient.user_id == actor.pk:
+        raise PermissionDenied("Die eigene Akte öffnet kein Notfallzugriff.")
     now = timezone.now()
     running = EmergencyAccess.objects.filter(running_at(now), patient=patient, user=actor).first()
     if running is not None:
         until = timezone.localtime(running.valid_until)
         raise ValidationError(f"Ein Notfallzugriff gilt schon bis {until:%H:%M} Uhr.")
+    if Patient.objects.filter(restriction_open(actor, now=now), pk=patient.pk).exists():
+        raise ValidationError("Sie sind für diesen Patienten freigegeben; es ist nichts zu öffnen.")
     emergency = EmergencyAccess(
         patient=patient,
         user=actor,
@@ -391,6 +396,9 @@ def grant_consent(
         raise ValidationError({"area": "Unbekannter Bereich."})
     if user.pk == actor.pk:
         raise ValidationError({"user": "Eine Freigabe für sich selbst ist nicht möglich."})
+    if user.pk == patient.user_id:
+        # Staff as patients: nobody opens their own record (#39).
+        raise ValidationError({"user": "Das ist das Konto des Patienten selbst."})
     if not user.is_active or not user.has_perm(consent_permission(area)):
         raise ValidationError({"user": "Dieses Konto hat keinen Zugang zu diesem Bereich."})
     today = timezone.localdate()

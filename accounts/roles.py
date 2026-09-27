@@ -35,7 +35,9 @@ CARE_TEAM_ROLES = [PSYCHOLOGY, ADDICTION_THERAPY]
 # record are in `records/access.py`. Doctors keep the care team and record
 # consents (#38). Restriction (#39, #27 question 6): doctors set, release
 # and lift it and open it in an emergency; the administration may only set
-# it, link staff accounts and read the list of emergency accesses.
+# it, link staff accounts and read the list of emergency accesses. Only the
+# administration links: the list of accounts to choose from leaves out those
+# already linked, and so shows who of the staff is a patient.
 _MASTER_DATA_EDIT = ["patients.view_patient", "patients.add_patient", "patients.change_patient"]
 _MASTER_DATA_READ = ["patients.view_patient"]
 _CHART = ["records.view_chartentry", "records.add_chartentry"]
@@ -61,7 +63,6 @@ _CARE_TEAM = [
 _RESTRICTION_DOCTOR = [
     "patients.restrict_patient",
     "patients.lift_restriction",
-    "patients.link_account",
     "patients.add_emergencyaccess",
 ]
 _RESTRICTION_ADMINISTRATION = [

@@ -15,7 +15,6 @@ PERMISSIONS = {
         "records.write_restricted",
         "patients.restrict_patient",
         "patients.lift_restriction",
-        "patients.link_account",
         "patients.add_emergencyaccess",
     ],
     "Verwaltung": [

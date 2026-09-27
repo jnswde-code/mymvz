@@ -6,9 +6,11 @@ number of hits and never the terms. Unknown patients answer 404.
 
 A restriction (#39) closes every page of the patient with 403 for those not
 released (`can_see_patient`). The detail page then shows only the lock with
-the ways past it: emergency access and releasing someone else (doctors).
-Setting, lifting and linking an account change only the restriction and
-reveal nothing, so they work on a closed patient too.
+the ways past it: emergency access, and releasing someone else or ending
+such a release (doctors). Setting, linking and unlinking an account change
+nothing anyone could read, so they work on a closed patient too. Lifting
+needs the patient open, so a doctor who is not released first opens an
+emergency access with a reason.
 """
 
 from django.contrib import messages
@@ -33,6 +35,7 @@ from patients.forms import (
     SearchForm,
 )
 from patients.models import (
+    EMERGENCY_ACCESS_MINUTES,
     CareTeamMember,
     ConsentArea,
     ConsentToShare,
@@ -64,7 +67,12 @@ def _patient(request, pk) -> Patient:
 def _locked(request, patient):
     """The lock page: name and date of birth, as the search shows them, nothing else."""
     user = request.user
-    context = {"patient": patient}
+    context = {"patient": patient, "emergency_minutes": EMERGENCY_ACCESS_MINUTES}
+    if user.has_perm("patients.view_consenttoshare"):
+        # Who is released, so a withdrawn release can be ended (#39).
+        context["releases"] = patient.consents.filter(
+            area=ConsentArea.RESTRICTED, ended_at__isnull=True
+        ).select_related("user")
     if user.has_perm("patients.add_consenttoshare"):
         context["consent_form"] = ConsentForm(actor=user, areas=[ConsentArea.RESTRICTED])
     return render(request, "patients/locked.html", context, status=403)
@@ -262,8 +270,11 @@ def add_consent_view(request, pk):
 @permission_required("patients.change_consenttoshare", raise_exception=True)
 @require_POST
 def end_consent_view(request, pk, consent_pk):
-    _patient(request, pk)
+    patient = _open_patient(pk)
     consent = get_object_or_404(ConsentToShare, pk=consent_pk, patient_id=pk)
+    # On a closed patient only a release of the restriction, as on the lock page.
+    if consent.area != ConsentArea.RESTRICTED and not can_see_patient(request.user, patient):
+        raise PermissionDenied
     try:
         services.end_consent(consent, actor=request.user)
     except ValidationError as error:
@@ -276,8 +287,8 @@ def end_consent_view(request, pk, consent_pk):
 # --- Restriction, staff as patients, emergency access (#39) ------------------
 
 
-def _change_restriction(request, pk, change, success):
-    patient = _open_patient(pk)
+def _change_restriction(request, pk, change, success, *, needs_open=False):
+    patient = _patient(request, pk) if needs_open else _open_patient(pk)
     try:
         change(patient, actor=request.user)
     except ValidationError as error:
@@ -303,7 +314,11 @@ def restrict_view(request, pk):
 @permission_required("patients.lift_restriction", raise_exception=True)
 @require_POST
 def lift_restriction_view(request, pk):
-    return _change_restriction(request, pk, services.lift_restriction, "Sperrvermerk aufgehoben.")
+    # Only with the patient open: released, or after an emergency access
+    # with a reason. Otherwise lifting would be a way past it without one.
+    return _change_restriction(
+        request, pk, services.lift_restriction, "Sperrvermerk aufgehoben.", needs_open=True
+    )
 
 
 @login_required
@@ -354,4 +369,8 @@ def emergency_view(request, pk):
             until = timezone.localtime(emergency.valid_until)
             messages.success(request, f"Notfallzugriff bis {until:%H:%M} Uhr, protokolliert.")
             return redirect("records:chart", pk=patient.pk)
-    return render(request, "patients/emergency.html", {"patient": patient, "form": form})
+    return render(
+        request,
+        "patients/emergency.html",
+        {"patient": patient, "form": form, "emergency_minutes": EMERGENCY_ACCESS_MINUTES},
+    )

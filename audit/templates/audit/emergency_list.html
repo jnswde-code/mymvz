@@ -4,7 +4,7 @@
 
 {% block content %}
   <h1>Notfallzugriffe</h1>
-  <p><small>Ärztinnen und Ärzte öffnen damit einen Sperrvermerk für 60 Minuten. Jeder Zugriff in dieser Zeit steht außerdem im <a href="{% url 'audit:log' %}">Zugriffsprotokoll</a>.</small></p>
+  <p><small>Ärztinnen und Ärzte öffnen damit einen Sperrvermerk bis zur Zeit unter „bis“. Jeder Zugriff in dieser Zeit steht außerdem im <a href="{% url 'audit:log' %}">Zugriffsprotokoll</a>.</small></p>
   <table>
     <thead>
       <tr><th>von</th><th>bis</th><th>Konto</th><th>Patient</th><th>Patient-ID</th><th>Grund</th></tr>
