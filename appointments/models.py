@@ -96,6 +96,15 @@ class AppointmentRequest(models.Model):
     closed_at = models.DateTimeField(null=True, blank=True)
     privacy_notice_version = models.CharField(max_length=40)
     delete_after = models.DateTimeField(null=True, blank=True, db_index=True)
+    # Set only by staff through `services.assign_patient` (#5 section 4, #26).
+    # PROTECT: the deletion of a patient (K8) must deal with its appointments.
+    patient = models.ForeignKey(
+        "patients.Patient",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="appointment_requests",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -249,6 +258,14 @@ class Appointment(models.Model):
     cancellation_reason = models.CharField(max_length=32, choices=Reason, blank=True)
     # Own deletion date, so an appointment may outlive its request in stage 4.
     delete_after = models.DateTimeField(null=True, blank=True, db_index=True)
+    # Follows the request (`services.assign_patient`, #26).
+    patient = models.ForeignKey(
+        "patients.Patient",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="appointments",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

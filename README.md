@@ -8,7 +8,9 @@ Stand: Django 5.2 (LTS) mit PostgreSQL in Docker Compose. Konten fürs
 Praxisteam mit Pflicht zum zweiten Faktor (TOTP-App), Rollen und ein
 Zugriffsprotokoll. Die Terminanfrage für Patienten unter `/termin/`: Formular
 mit Spam-Schutz, Bestätigung der E-Mail-Adresse, Links zum Zurückziehen,
-Annehmen eines Vorschlags und Absagen. Die Bearbeitung durch die Praxis
+Annehmen eines Vorschlags und Absagen. Ein Patientenstamm fürs Team unter
+`/patienten/` (Suche, Anlegen mit Dublettenhinweis, Kennungen, Verlauf der
+Stammdaten). Die Bearbeitung durch die Praxis
 (Backoffice) folgt mit #8, der Löschlauf mit #9.
 
 ## Voraussetzungen
@@ -29,6 +31,9 @@ Rechner zeigen, in der `.env` `SITE_BASE_URL=http://localhost:8000` setzen.
 **Wer eine `.env` von vor #7 hat**, ergänzt die neuen Variablen aus
 `.env.example` (`DEFAULT_FROM_EMAIL`, `PRACTICE_NOTIFICATION_EMAIL` und die
 `EMAIL_*`-Werte), sonst startet Django nicht.
+
+**Wer eine `.env` von vor #26 hat**, kann `DATA_MODE=synthetic` ergänzen;
+ohne den Eintrag gilt dieselbe Vorgabe.
 
 **Wer vor dem eigenen Benutzermodell (#25) schon migriert hat**, setzt die
 Datenbank einmal zurück, sonst passt das Schema nicht:
@@ -56,6 +61,14 @@ Wiederherstellungscodes. Weitere Befehle:
     docker compose run --rm web python manage.py reset_second_factor erika.beispiel
 
 Konten werden nie gelöscht, nur deaktiviert.
+
+## Testdaten
+
+Das System läuft mit `DATA_MODE=synthetic` (Vorgabe) und zeigt dann auf
+jeder Seite das Band „Testsystem – nur erfundene Daten“. Echte
+Patientendaten gehören nicht hinein. Erfundene Patienten legt an:
+
+    docker compose run --rm web python manage.py seed_demo --count 20
 
 ## Sprachdienst (Prototyp)
 
@@ -97,6 +110,7 @@ Pull Request.
 | `accounts/` | Konten, Anmeldung mit zweitem Faktor, Rollen |
 | `audit/` | Zugriffsprotokoll |
 | `practice/` | Ärztinnen/Ärzte als Ressourcen, Öffnungs- und Sprechzeiten |
+| `patients/` | Patientenstamm: Stammdaten, Kennungen, Verlauf, Behandlungsteam |
 | `appointments/` | Terminanfrage, Termine, Links in Mails, Spam-Schutz |
 | `reporting/` | Zählerstände ohne Personenbezug für Auswertungen |
 | `templates/` | gemeinsame Templates |

@@ -24,12 +24,17 @@ ROLES = {
 }
 
 # Permissions per group, as "app_label.codename". Only what exists today;
-# record-level checks come with K2 (#23).
+# record-level checks come with K2 (#23). Master data: doctors, MFA and the
+# administration read and change it, the other professions only read it
+# (#23 section 5.1, #26).
+_MASTER_DATA_EDIT = ["patients.view_patient", "patients.add_patient", "patients.change_patient"]
+_MASTER_DATA_READ = ["patients.view_patient"]
+
 ROLE_PERMISSIONS = {
-    DOCTOR: [],
-    MFA: [],
-    ADMINISTRATION: ["audit.view_accesslogentry"],
-    PSYCHOLOGY: [],
-    ADDICTION_THERAPY: [],
-    NUTRITION: [],
+    DOCTOR: _MASTER_DATA_EDIT,
+    MFA: _MASTER_DATA_EDIT,
+    ADMINISTRATION: ["audit.view_accesslogentry", *_MASTER_DATA_EDIT],
+    PSYCHOLOGY: _MASTER_DATA_READ,
+    ADDICTION_THERAPY: _MASTER_DATA_READ,
+    NUTRITION: _MASTER_DATA_READ,
 }

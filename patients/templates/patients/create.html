@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Patient anlegen – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  <h1>Patient anlegen</h1>
+  {% if synthetic_data %}<p><strong>Testsystem: bitte nur erfundene Personen anlegen.</strong></p>{% endif %}
+  {% if duplicates %}
+    <section>
+      <h2>Mögliche Dubletten</h2>
+      <p>Gleiches Geburtsdatum und ähnlicher Name. Bitte prüfen, ob die Person schon angelegt ist.</p>
+      <ul>
+        {% for patient in duplicates %}
+          <li><a href="{% url 'patients:detail' patient.pk %}">{{ patient.family_name }}, {{ patient.given_name }}</a>{% if patient.birth_name %} geb. {{ patient.birth_name }}{% endif %}, {{ patient.date_of_birth|date:"d.m.Y" }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    {% for field in form %}
+      {% if field.name == "not_a_duplicate" and not duplicates %}{% elif field.is_hidden %}{{ field }}{% else %}<p>{{ field.errors }}{{ field.label_tag }} {{ field }}</p>{% endif %}
+    {% endfor %}
+    <button type="submit">Anlegen</button>
+  </form>
+{% endblock %}

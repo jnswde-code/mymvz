@@ -21,6 +21,10 @@ paths:
 - `env_bool` bricht bei unbekannten Werten ab, statt still `False` zu nehmen:
   Ein Tippfehler bei `DJANGO_DEBUG` soll nicht unbemerkt die Einstellung
   kippen (#4).
+- `DATA_MODE` ist `synthetic` (Vorgabe) oder `real`, sonst startet Django
+  nicht (`env_choice`). `synthetic` zeigt das Band „Testsystem – nur
+  erfundene Daten“ (`config/context_processors.py`) und erlaubt `seed_demo`;
+  `real` erst mit K9 (#23 Abschnitt 8, #26).
 - `localhost` steht nur mit `DJANGO_DEBUG=1` in `ALLOWED_HOSTS`.
 - `env_str` behandelt `NAME=` wie eine fehlende Variable, sonst liefe ein
   leerer `SITE_HOST` oder ein leeres Passwort still durch.
@@ -38,7 +42,8 @@ paths:
 
 ## templates/base.html
 
-- Zeigt angemeldeten Konten Name, Konto-Link und Abmelden (POST).
+- Zeigt angemeldeten Konten Name, Konto-Link und Abmelden (POST), dazu die
+  Links, für die das Konto ein Recht hat, und im Testsystem das Band.
 
 ## config/views.py, templates/home.html
 

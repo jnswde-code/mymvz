@@ -68,6 +68,7 @@ Projekt dazukommt:
 - `config/settings.py`: Django-Einstellungen, alle Werte aus `.env`
 - `config/env.py`: Umgebungsvariablen lesen (`env_str`, `env_bool`, `env_list`)
 - `config/urls.py`, `config/views.py`: Platzhalter-Startseite
+- `config/context_processors.py`: Band „Testsystem“ bei `DATA_MODE=synthetic`
 - `config/wsgi.py`: Einstieg für gunicorn
 - `templates/`: Grundlayout `base.html` und Startseite
 - `manage.py`, `tests/test_env.py`, `tests/test_home.py`
@@ -91,6 +92,15 @@ Projekt dazukommt:
   `OpeningHours` (Öffnungs- und Sprechzeiten)
 - `practice/info.py`: Name, Anschrift, Telefon, Links der Homepage
 - `tests/test_practice.py`
+
+**`patients`**: Patientenstamm (K1 aus #23)
+- `patients/models.py`: `Patient`, `PatientIdentifier`, `PatientHistory`,
+  `CareTeamMember`
+- `patients/services.py`: alle Änderungen, Dublettenhinweis, Suche,
+  `retain_until`
+- `patients/views.py`, `patients/forms.py`: Seiten fürs Team unter
+  `/patienten/`
+- `patients/management/commands/seed_demo.py`: erfundene Patienten
 
 **`appointments`**: Terminanfrage für Patienten, Termine, Links, Mails
 - `appointments/models.py`: Anfrage, Wunschzeiträume, Termin, Verlauf, Tokens

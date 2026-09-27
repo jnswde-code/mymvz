@@ -60,13 +60,15 @@ paths:
 - `client_address` liest `REMOTE_ADDR`. Hinter Caddy (#10) muss es die von
   Caddy weitergereichte Adresse lesen, sonst teilen sich alle eine Sperre.
 
-## accounts/roles.py, accounts/migrations/0002_roles.py
+## accounts/roles.py, accounts/migrations/
 
 - Rollen sind Gruppen nach #23 Abschnitt 5.1, angelegt per Datenmigration.
   Migrationen tragen eine eigene Kopie der Liste, eine Änderung an
   `roles.py` braucht also eine neue Datenmigration. Ein Test prüft, dass die
   Gruppen nach allen Migrationen `roles.py` entsprechen.
-- Heute hat nur die Verwaltung ein Recht (Zugriffsprotokoll lesen). Die
+- Rechte heute: Die Verwaltung liest das Zugriffsprotokoll. Stammdaten
+  lesen, anlegen und ändern Ärztinnen/Ärzte, MFA und Verwaltung; die übrigen
+  Berufe lesen sie nur (#23 Abschnitt 5.1, #26, Migration `0003`). Die
   Prüfung je Datensatz und Schutzstufen kommen mit K2 (#23), nicht hier.
 
 ## accounts/management/commands/
