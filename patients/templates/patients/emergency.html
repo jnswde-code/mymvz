@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Notfallzugriff – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  <h1>Notfallzugriff: {{ patient.family_name }}, {{ patient.given_name }} ({{ patient.date_of_birth|date:"d.m.Y" }})</h1>
+  <p>Öffnet für 60 Minuten, was ein Sperrvermerk verschließt: Stammdaten, Akte und Einträge mit Sperrvermerk. Psychotherapie bleibt geschlossen.</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Notfallzugriff öffnen</button>
+  </form>
+  <p><a href="{% url 'patients:search' %}">Abbrechen</a></p>
+{% endblock %}

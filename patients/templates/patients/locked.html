@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Sperrvermerk – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  <h1>{{ patient.family_name }}, {{ patient.given_name }} ({{ patient.date_of_birth|date:"d.m.Y" }})</h1>
+  <p><strong>Sperrvermerk.</strong> Stammdaten und Akte sehen nur namentlich freigegebene Personen.</p>
+
+  {% if perms.patients.add_emergencyaccess %}
+    <h2>Notfallzugriff</h2>
+    <p>Öffnet den Patienten für 60 Minuten. Der Zugriff wird mit Grund protokolliert und der Verwaltung sowie den freigegebenen Personen angezeigt.</p>
+    <p><a href="{% url 'patients:emergency' patient.pk %}">Notfallzugriff mit Grund öffnen</a></p>
+  {% endif %}
+
+  {% if consent_form %}
+    <h2>Person freigeben</h2>
+    <p><small>Nur für eine andere Person, nie für sich selbst. Wird protokolliert.</small></p>
+    <form method="post" action="{% url 'patients:add_consent' patient.pk %}">
+      {% csrf_token %}
+      {{ consent_form.as_p }}
+      <button type="submit">Freigabe eintragen</button>
+    </form>
+  {% endif %}
+
+  {% if perms.patients.lift_restriction %}
+    <form method="post" action="{% url 'patients:lift_restriction' patient.pk %}">
+      {% csrf_token %}<button type="submit">Sperrvermerk aufheben (wird protokolliert)</button>
+    </form>
+  {% endif %}
+{% endblock %}

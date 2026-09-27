@@ -5,8 +5,8 @@ paths:
 # Akte: Kontakte und Karteikarte in Fassungen
 
 Konzept in #23 (Abschnitte 3, 5 und 6), Schnitt und Entscheidungen in #27,
-umgesetzt als K2.1 (#37) und K2.2 (#38, Behandlungsteam und Schutzstufen).
-K2.3 (#39) bringt Sperrvermerk und Notfallzugriff.
+umgesetzt als K2.1 (#37), K2.2 (#38, Behandlungsteam und Schutzstufen) und
+K2.3 (#39, Sperrvermerk und Notfallzugriff).
 
 ## Zwei Regeln für alles in `records`
 
@@ -82,8 +82,8 @@ K2.3 (#39) bringt Sperrvermerk und Notfallzugriff.
 - `create_entry` nimmt nur Schutzstufen, die der Autor schreiben darf
   (`access.writable_sensitivities`); ohne Angabe die erste davon, so
   schreibt Psychologie `psychotherapy` und Suchttherapie `addiction` (#38).
-  Die Schutzstufe bleibt über alle Fassungen gleich. `restricted` weist
-  sie ab, bis K2.3 sie regelt.
+  Die Schutzstufe bleibt über alle Fassungen gleich. `restricted` schreiben
+  nur Ärztinnen/Ärzte (`write_restricted`, #39).
 
 ## records/access.py
 
@@ -100,6 +100,12 @@ K2.3 (#39) bringt Sperrvermerk und Notfallzugriff.
 - Eine Freigabe (`patients.ConsentToShare`) öffnet einen Bereich eines
   Patienten für eine benannte Person, zusätzlich zu Akte und Team, nie
   statt ihnen.
+- Sperrvermerk (#39): Ein Patient mit `is_restricted` ist vor allen anderen
+  Prüfungen zu, außer für Personen, denen `patients.models.restriction_open`
+  ihn öffnet (Freigabe `restricted` oder eigener laufender Notfallzugriff).
+  Einträge mit `restricted` sehen dieselben Personen und ihr Autor. Der
+  Notfallzugriff öffnet nie Psychotherapie, sonst wäre die Trennung nach
+  § 203 StGB über ihn umgehbar.
 - Team und Freigabe gelten an einem Tag in Europe/Berlin
   (`patients.models.valid_on`); `valid_until` ist der erste Tag ohne
   Zugang. Wer heute ausgetragen wird, sieht ab sofort nichts mehr.
@@ -119,9 +125,10 @@ K2.3 (#39) bringt Sperrvermerk und Notfallzugriff.
 
 ## records/views.py
 
-- Reihenfolge: Recht auf die Akte (403), Patient (404), Behandlungsteam
-  (403), dann Datensatz nur aus `visible_to` (404, damit Verborgenes nicht
-  auffällt), dann protokollieren.
+- Reihenfolge: Recht auf die Akte (403), Patient (404), Sperrvermerk (die
+  Akte leitet auf die Sperrseite in `patients`, alle anderen Seiten 403),
+  Behandlungsteam (403), dann Datensatz nur aus `visible_to` (404, damit
+  Verborgenes nicht auffällt), dann protokollieren.
   Akte öffnen ist `list` auf `records.chartentry` mit `patient_id`.
 - Der Verlauf zeigt Wortunterschiede (`records/diff.py`, `difflib`) und
   geänderte Felder je Fassung.

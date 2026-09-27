@@ -7,6 +7,7 @@ when. All changes go through `patients.services`.
 """
 
 import uuid
+from datetime import timedelta
 
 from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist
@@ -42,6 +43,20 @@ class Patient(models.Model):
     email = models.EmailField("E-Mail", blank=True)
     deceased_on = models.DateField("verstorben am", null=True, blank=True)
     is_active = models.BooleanField("aktiv", default=True)
+    # Sperrvermerk (#23 section 5.2, #39): master data and chart only for
+    # persons released by name (`ConsentArea.RESTRICTED`) and during an
+    # emergency access. Set and lifted through `services`, never in the form.
+    is_restricted = models.BooleanField("Sperrvermerk", default=False, editable=False)
+    # A staff member as patient. Linking sets the restriction (#23 decision 8).
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        editable=False,
+        related_name="patient",
+        verbose_name="Konto",
+    )
     # Set by the contacts of the record (K2) through `services.record_contact`.
     last_contact_on = models.DateField(null=True, blank=True, editable=False)
     # End of the year of the last contact + 10 years (§ 630f BGB, #23 3.3).
@@ -54,6 +69,11 @@ class Patient(models.Model):
         ordering = ["family_name", "given_name", "date_of_birth"]
         verbose_name = "Patient"
         verbose_name_plural = "Patienten"
+        permissions = [
+            ("restrict_patient", "Sperrvermerk setzen"),
+            ("lift_restriction", "Sperrvermerk aufheben"),
+            ("link_account", "Patient mit einem Konto verknüpfen"),
+        ]
         constraints = [
             models.CheckConstraint(
                 condition=Q(sex__in=Sex.values), name="patients_patient_sex_valid"
@@ -244,6 +264,9 @@ class ConsentArea(models.TextChoices):
     # same values, as `patients` does not know `records` (#23 section 4).
     ADDICTION = "addiction", "Sucht"
     PSYCHOTHERAPY = "psychotherapy", "Psychotherapie"
+    # Releases a patient with a restriction (master data and chart) and the
+    # entries with the level `restricted` of any patient (#39).
+    RESTRICTED = "restricted", "Sperrvermerk"
 
 
 class ConsentToShare(_ValidFromUntil, models.Model):
@@ -251,7 +274,8 @@ class ConsentToShare(_ValidFromUntil, models.Model):
 
     Opens all entries of `area` of this patient to `user` from/until
     (`valid_on`), on top of the care team and the chart right the person
-    needs anyway. Ended, not deleted; granting and ending are logged.
+    needs anyway. `restricted` also opens the patient behind a restriction
+    (#39). Ended, not deleted; granting and ending are logged.
     """
 
     Area = ConsentArea
@@ -297,3 +321,100 @@ class ConsentToShare(_ValidFromUntil, models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValueError("Freigaben werden beendet, nicht gelöscht.")
+
+
+# How long one emergency access opens a patient (#27, question 5); after
+# that a new reason is needed.
+EMERGENCY_ACCESS_DURATION = timedelta(minutes=60)
+
+
+class EmergencyAccess(models.Model):
+    """A doctor opens what a restriction closes, in an emergency, with a reason (#23 5.2, #39).
+
+    Opens the patient and the entries with the level `restricted` for
+    `user` from `valid_from` until just before `valid_until`, not
+    psychotherapy. The reason is kept only here, never in the access log,
+    which holds no content. Shown to the administration and to the persons
+    released for the patient. Never changed, deleted only with the patient.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    patient = models.ForeignKey(
+        Patient, on_delete=models.CASCADE, related_name="emergency_accesses"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+", verbose_name="Konto"
+    )
+    reason = models.CharField("Grund", max_length=500)
+    valid_from = models.DateTimeField(default=timezone.now, editable=False)
+    valid_until = models.DateTimeField(editable=False)
+
+    class Meta:
+        ordering = ["-valid_from"]
+        verbose_name = "Notfallzugriff"
+        verbose_name_plural = "Notfallzugriffe"
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(reason=""), name="patients_emergency_access_reason_given"
+            ),
+            models.CheckConstraint(
+                condition=Q(valid_until__gt=models.F("valid_from")),
+                name="patients_emergency_access_until_after_from",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} für {self.patient_id} ab {self.valid_from:%Y-%m-%d %H:%M}"
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValueError("Notfallzugriffe werden nie geändert.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValueError("Notfallzugriffe werden nur mit dem Patienten gelöscht.")
+
+    @property
+    def is_running(self) -> bool:
+        return self.valid_from <= timezone.now() < self.valid_until
+
+
+def running_at(now) -> Q:
+    """Emergency accesses that count at `now`; at `valid_until` it is over."""
+    return Q(valid_from__lte=now, valid_until__gt=now)
+
+
+def restriction_open(user, field: str = "pk", now=None) -> Q:
+    """Patients whose restriction is open to `user` now, as a filter on `field`.
+
+    The one definition (#39), for the patient pages and `records/access.py`:
+    a release (`ConsentArea.RESTRICTED`) that counts today, or the user's own
+    emergency access that runs now.
+    """
+    now = now or timezone.now()
+    released = ConsentToShare.objects.filter(
+        valid_on(timezone.localdate(now)), user=user, area=ConsentArea.RESTRICTED
+    ).values("patient_id")
+    emergency = EmergencyAccess.objects.filter(running_at(now), user=user).values("patient_id")
+    return Q(**{f"{field}__in": released}) | Q(**{f"{field}__in": emergency})
+
+
+def can_see_patient(user, patient, now=None) -> bool:
+    """Master data and chart are not closed by a restriction for `user`."""
+    if not patient.is_restricted:
+        return True
+    return Patient.objects.filter(restriction_open(user, now=now), pk=patient.pk).exists()
+
+
+def emergency_notices(user, patient):
+    """Emergency accesses to this patient, for a person released for it today (#39); else none.
+
+    Released persons learn who opened the patient in an emergency, when and
+    why, so misuse does not stay unnoticed.
+    """
+    released = ConsentToShare.objects.filter(
+        valid_on(timezone.localdate()), user=user, patient=patient, area=ConsentArea.RESTRICTED
+    ).exists()
+    if not released:
+        return EmergencyAccess.objects.none()
+    return patient.emergency_accesses.select_related("user")

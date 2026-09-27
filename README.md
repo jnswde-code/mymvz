@@ -122,7 +122,7 @@ Pull Request.
 | `accounts/` | Konten, Anmeldung mit zweitem Faktor, Rollen |
 | `audit/` | Zugriffsprotokoll |
 | `practice/` | Ärztinnen/Ärzte als Ressourcen, Öffnungs- und Sprechzeiten |
-| `patients/` | Patientenstamm: Stammdaten, Kennungen, Verlauf, Behandlungsteam |
+| `patients/` | Patientenstamm: Stammdaten, Kennungen, Verlauf, Behandlungsteam, Freigaben, Sperrvermerk, Notfallzugriff |
 | `records/` | Akte: Kontakte und Karteikarte in unveränderlichen Fassungen |
 | `appointments/` | Terminanfrage, Termine, Links in Mails, Spam-Schutz |
 | `reporting/` | Zählerstände ohne Personenbezug für Auswertungen |

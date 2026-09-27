@@ -1,7 +1,8 @@
-"""The record pages for the team (#37, #38).
+"""The record pages for the team (#37, #38, #39).
 
 Every page first checks the right to the chart (403, also for a patient
-whose care team the user is not on), then looks the record up only among
+whose care team the user is not on or whose restriction is closed to them;
+the chart itself then sends to the lock page), then looks the record up only among
 what `access.visible_to` lets through (404, so a hidden record does not
 reveal that it exists), and logs afterwards:
 opening the chart is a `list` of chart entries with `patient_id`, a history
@@ -19,7 +20,7 @@ from django.urls import reverse
 from django.views.decorators.cache import never_cache
 
 from audit.log import log_access
-from patients.models import Patient
+from patients.models import Patient, emergency_notices
 from records import access, services
 from records.diff import word_diff
 from records.forms import (
@@ -73,8 +74,13 @@ def _chart_url(patient, **query) -> str:
 @login_required
 @never_cache
 def chart_view(request, pk):
-    patient = _patient(request, pk)
     user = request.user
+    if access.has_chart_role(user):
+        patient = get_object_or_404(Patient, pk=pk)
+        if access.is_locked(user, patient):
+            # One lock page, with emergency access and release (`patients`).
+            return redirect("patients:detail", pk=patient.pk)
+    patient = _patient(request, pk)
     include_errors = request.GET.get("irrtuemer") == "1" and access.can_view_errors(user)
     encounters = list(
         access.visible_to(
@@ -94,6 +100,7 @@ def chart_view(request, pk):
     for entry in entries:
         by_encounter[entry.encounter_lineage_id].append(entry)
     hidden = access.hidden_entries(user, patient)
+    has_hidden = bool(hidden)
     for encounter in encounters:
         encounter.entries = by_encounter.pop(encounter.lineage_id, [])
         encounter.hidden = hidden.pop(encounter.lineage_id, 0)
@@ -117,6 +124,8 @@ def chart_view(request, pk):
             "can_view_errors": access.can_view_errors(user),
             "include_errors": include_errors,
             "changeable": access.changeable(user, encounters) | access.changeable(user, entries),
+            "emergency_notices": emergency_notices(user, patient),
+            "has_hidden": has_hidden,
         },
     )
 
