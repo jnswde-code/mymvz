@@ -48,8 +48,12 @@ services:
     env_file: .env
     volumes:
       - ./voice:/app
+    # The internal API of `web` (VOICE_API_URL, #14). In operation only the
+    # Docker network reaches it (the proxy does not forward /intern/, #10);
+    # here port 8000 is open, and the key is the only barrier.
     depends_on:
       - livekit
+      - web
 
 volumes:
   pgdata:

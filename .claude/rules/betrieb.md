@@ -29,6 +29,9 @@ paths:
   zählen Postgres-Eigenheiten (Zeitzonen, Sperren, Constraints).
 - `livekit` und `voice` stehen im Profil `voice` und starten nur mit
   `--profile voice` (Regeldatei `voice`, #13).
+- `voice` hängt an `web`, weil der Agent die interne API von `telephony`
+  über `http://web:8000` erreicht; `web` muss dafür in
+  `DJANGO_EXTRA_HOSTS` stehen (#44).
 
 ## .github/workflows/ci.yml
 

@@ -61,3 +61,14 @@ NOBODY = (
     "Bitte rufen Sie während der Öffnungszeiten noch einmal an. "
     "Bei Lebensgefahr wählen Sie die 112, bei dringenden Beschwerden die 116 117."
 )
+
+# Stored with every request the assistant creates (`privacy_notice_version`,
+# #14 section 5). Set to the day of the change whenever GREETING or
+# PRIVACY_NOTICE changes.
+NOTICE_VERSION = "telefon-2026-09-27"
+
+API_UNAVAILABLE = (
+    "Das kann ich wegen eines technischen Problems gerade leider nicht erledigen. "
+    "Bitte rufen Sie später noch einmal an, am besten während der Öffnungszeiten. "
+    "Bei Lebensgefahr wählen Sie die 112, bei dringenden Beschwerden die 116 117."
+)

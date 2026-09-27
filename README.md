@@ -105,6 +105,14 @@ dann https://meet.livekit.io öffnen, Reiter „Custom“, Server
 von selbst bei; für jeden Versuch einen neuen Raumnamen nehmen. Die Latenz
 vom Satzende bis zur Antwort steht je Antwort im Log des Dienstes `voice`.
 
+Auskunft und Terminanfrage (#44) holt der Agent über eine interne API der
+Website unter `/intern/telefon/`. Dafür in der `.env` `VOICE_API_KEY` auf
+einen langen Zufallswert setzen und `web` in `DJANGO_EXTRA_HOSTS`
+aufnehmen; ohne Schlüssel ist die API aus, und der Assistent sagt, dass er
+gerade nichts aufnehmen kann. Anfragen vom Telefon erscheinen unter
+`/anfragen/` mit dem Kennzeichen „Telefon“. Mit der LLM-Attrappe ruft der
+Agent die Werkzeuge nicht auf; das geht erst mit einem echten LLM (#18).
+
 ## Tests und Linter
 
     docker compose run --rm web pytest
@@ -125,6 +133,7 @@ Pull Request.
 | `patients/` | Patientenstamm: Stammdaten, Kennungen, Verlauf, Behandlungsteam |
 | `records/` | Akte: Kontakte und Karteikarte in unveränderlichen Fassungen |
 | `appointments/` | Terminanfrage, Termine, Links in Mails, Spam-Schutz |
+| `telephony/` | Telefonassistent: interne API für den Sprachdienst |
 | `reporting/` | Zählerstände ohne Personenbezug für Auswertungen |
 | `templates/` | gemeinsame Templates |
 | `voice/` | Sprachdienst mit eigenem Image |

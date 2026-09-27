@@ -14,6 +14,14 @@ HOMEPAGE_URL = "https://mymvz.de/"
 IMPRINT_URL = "https://mymvz.de/impressum/"
 PRIVACY_URL = "https://mymvz.de/datenschutz/"
 
+# Provisional, for the phone assistant (#14, decision 3 of 27.09.2026): as
+# on the existing homepage (inventory in #3), to be confirmed by the practice
+# before real calls. The homepage names no parking, bus or train; the
+# assistant says it does not know.
+ACCESS = "Der barrierefreie Zugang ist von der Bahnstraße aus."
+# The homepage says "täglich"; the practice is closed at weekends.
+BLOOD_DRAW = "Blutabnahme ist an jedem Öffnungstag von 8 bis 9 Uhr."
+
 
 def practice_info(request):
     """Context processor: `practice` in every template."""

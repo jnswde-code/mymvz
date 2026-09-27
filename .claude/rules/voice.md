@@ -14,8 +14,8 @@ Anforderungen aus dem Konzept in #14, Abschnitte 3, 6 und 7.
   von der Web-App: LiveKit und die Anbieter-SDKs kommen nie ins Django-Image.
   Im Compose unter dem Profil `voice` (Dienste `livekit` und `voice`), damit
   `docker compose up` weiter nur die Website startet (#13).
-- Der Agent hat keine Datenbank-Zugangsdaten. Anfragen anlegen wird er über
-  eine interne API der Web-App (#14, Abschnitt 7), die kommt mit T0 in #14.
+- Der Agent hat keine Datenbank-Zugangsdaten. Auskunft und Anfragen laufen
+  über die interne API von `telephony` (Regeldatei `telephony`, #44).
 - ruff läuft von der Wurzel aus über `voice/` mit (`src` in der
   `pyproject.toml` der Wurzel). `voice/pyproject.toml` enthält nur pytest;
   das `pytest` der Wurzel sammelt `voice/tests/` nicht ein.
@@ -82,6 +82,35 @@ Anforderungen aus dem Konzept in #14, Abschnitte 3, 6 und 7.
 - Die Ansagen in `texts.py` sind Entwürfe; die bzw. der
   Datenschutzbeauftragte stimmt sie noch ab. Zahlen stehen zusätzlich
   ausgeschrieben, damit keine TTS „hundertzwölf“ sagt.
+
+## Werkzeuge (`tools.py`, `api_client.py`)
+
+- Die Liste ist abschließend (#14, Abschnitt 7): `get_practice_info`,
+  `check_time_window`, `create_phone_request` hier, `hand_off` und
+  `end_call` am Agenten. Es gibt kein Werkzeug, das vorhandene Anfragen,
+  Termine oder Personen liest. Die Terminarten sind ein Thema von
+  `get_practice_info`, kein eigenes Werkzeug. Rückrufbitten kommen mit P2
+  (#45) in dieselbe Datei.
+- Fällt die API aus (nicht konfiguriert, nicht erreichbar, 5 Sekunden ohne
+  Antwort, 403/404/5xx), sagt der Agent den festen Satz
+  `texts.API_UNAVAILABLE` und beendet die Antwort; das LLM rät nie. Im Log
+  steht nur der Grund (Status oder Ausnahme). Eine abgewiesene Eingabe (400)
+  geht als `ToolError` mit den Meldungen der API an das LLM, damit es
+  nachfragt.
+- Anlegen ist nicht wiederholbar: Die Mails gehen im selben HTTP-Aufruf
+  raus, ein Ausfall kann nach dem Commit kommen. Deshalb 20 Sekunden statt
+  5, und nach einem Ausfall legt das Werkzeug im selben Anruf nichts mehr
+  an. Höchstens drei Anfragen je Anruf; die Grenze je Nummer und Tag kommt
+  mit P3 (#46).
+- Die Wunschtage prüft nur die API (eine Stelle, #7). Das heutige Datum in
+  Europe/Berlin steht je Anruf in der Anweisung, sonst rechnet das LLM
+  „nächsten Dienstag“ falsch.
+- `texts.NOTICE_VERSION` wird mit jeder Anfrage als
+  `privacy_notice_version` gespeichert; bei jeder Änderung an Begrüßung oder
+  Datenschutzansage auf das Datum setzen.
+- Bodies und Antworten der API kommen nie ins Log, nur der Status.
+- Die Weiche geht jedem Werkzeug vor: Der Wortfilter in `llm_node` läuft,
+  bevor das LLM ein Werkzeug wählen kann.
 
 ## Protokolle (`log_privacy.py`)
 
