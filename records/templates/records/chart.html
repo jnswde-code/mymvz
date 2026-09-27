@@ -35,15 +35,16 @@
             </small>
           </li>
         {% empty %}
-          <li>keine Einträge</li>
+          {% if not encounter.hidden %}<li>keine Einträge</li>{% endif %}
         {% endfor %}
+        {% if encounter.hidden %}<li><em>{{ encounter.hidden }} Eintr{{ encounter.hidden|pluralize:"ag,äge" }} mit Zugriffsbeschränkung</em></li>{% endif %}
       </ul>
     </section>
   {% empty %}
     <p>Noch keine Kontakte.</p>
   {% endfor %}
 
-  {% if without_encounter %}
+  {% if without_encounter or hidden_without_encounter %}
     <h2>Einträge ohne sichtbaren Kontakt</h2>
     <ul>
       {% for entry in without_encounter %}
@@ -52,6 +53,7 @@
           <small>· <a href="{% url 'records:history' patient.pk 'eintraege' entry.lineage_id %}">Verlauf</a></small>
         </li>
       {% endfor %}
+      {% if hidden_without_encounter %}<li><em>{{ hidden_without_encounter }} Eintr{{ hidden_without_encounter|pluralize:"ag,äge" }} mit Zugriffsbeschränkung</em></li>{% endif %}
     </ul>
   {% endif %}
 {% endblock %}

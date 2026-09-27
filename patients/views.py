@@ -8,14 +8,28 @@ number of hits and never the terms. Unknown patients answer 404.
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
+from django.db.models import F
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from audit.log import log_access
 from patients import services
-from patients.forms import IdentifierForm, NewPatientForm, PatientForm, SearchForm
-from patients.models import Patient, PatientIdentifier
+from patients.forms import (
+    CareTeamForm,
+    ConsentForm,
+    IdentifierForm,
+    NewPatientForm,
+    PatientForm,
+    SearchForm,
+)
+from patients.models import (
+    CareTeamMember,
+    ConsentToShare,
+    Patient,
+    PatientIdentifier,
+    is_on_care_team,
+)
 
 
 def _master_data(form) -> dict:
@@ -69,18 +83,33 @@ def create_view(request):
 @never_cache
 def detail_view(request, pk):
     patient = get_object_or_404(Patient, pk=pk)
-    log_access(request.user, "view", patient, patient_id=patient.pk)
-    return render(
-        request,
-        "patients/detail.html",
-        {
-            "patient": patient,
-            "identifiers": patient.identifiers.all(),
-            "history": patient.history.select_related("changed_by"),
-            "care_team": patient.care_team.filter(valid_until=None).select_related("user"),
-            "identifier_form": IdentifierForm(),
-        },
+    user = request.user
+    context = {
+        "patient": patient,
+        "identifiers": patient.identifiers.all(),
+        "history": patient.history.select_related("changed_by"),
+        "identifier_form": IdentifierForm(),
+    }
+    # Who treats a patient, and in which protected area, is itself clinical
+    # (#38): the team only for those who see this chart, consents only for
+    # those who keep them. Same rule as `records.access.can_view_chart`,
+    # which `patients` does not import.
+    sees_chart = user.has_perm("records.view_chartentry") and (
+        user.has_perm("records.view_all_patients") or is_on_care_team(user, patient)
     )
+    context["sees_chart"] = sees_chart
+    if sees_chart:
+        context["care_team"] = patient.care_team.select_related("user").order_by(
+            F("valid_until").asc(nulls_first=True), "-valid_from"
+        )
+        if user.has_perm("patients.add_careteammember"):
+            context["care_team_form"] = CareTeamForm(patient=patient)
+    if user.has_perm("patients.view_consenttoshare"):
+        context["consents"] = patient.consents.select_related("user", "granted_by", "ended_by")
+        if user.has_perm("patients.add_consenttoshare"):
+            context["consent_form"] = ConsentForm(actor=user)
+    log_access(user, "view", patient, patient_id=patient.pk)
+    return render(request, "patients/detail.html", context)
 
 
 @login_required
@@ -107,8 +136,7 @@ def add_identifier_view(request, pk):
         try:
             services.add_identifier(patient, actor=request.user, **form.cleaned_data)
         except ValidationError as error:
-            for message in error.messages:
-                messages.error(request, message)
+            _show_errors(request, error)
         else:
             messages.success(request, "Kennung hinzugefügt.")
     else:
@@ -124,8 +152,76 @@ def end_identifier_view(request, pk, identifier_pk):
     try:
         services.end_identifier(identifier, actor=request.user)
     except ValidationError as error:
-        for message in error.messages:
-            messages.error(request, message)
+        _show_errors(request, error)
     else:
         messages.success(request, "Kennung beendet.")
+    return redirect("patients:detail", pk=pk)
+
+
+def _show_errors(request, error: ValidationError):
+    for message in error.messages:
+        messages.error(request, message)
+
+
+@login_required
+@permission_required("patients.add_careteammember", raise_exception=True)
+@require_POST
+def add_care_team_view(request, pk):
+    patient = get_object_or_404(Patient, pk=pk)
+    form = CareTeamForm(request.POST, patient=patient)
+    if form.is_valid():
+        try:
+            services.add_care_team_member(patient, form.cleaned_data["user"], actor=request.user)
+        except ValidationError as error:
+            _show_errors(request, error)
+        else:
+            messages.success(request, "Ins Behandlungsteam eingetragen.")
+    else:
+        messages.error(request, "Bitte eine Person wählen.")
+    return redirect("patients:detail", pk=patient.pk)
+
+
+@login_required
+@permission_required("patients.change_careteammember", raise_exception=True)
+@require_POST
+def end_care_team_view(request, pk, member_pk):
+    member = get_object_or_404(CareTeamMember, pk=member_pk, patient_id=pk)
+    try:
+        services.end_care_team_member(member, actor=request.user)
+    except ValidationError as error:
+        _show_errors(request, error)
+    else:
+        messages.success(request, "Aus dem Behandlungsteam ausgetragen; ab sofort ohne Zugang.")
+    return redirect("patients:detail", pk=pk)
+
+
+@login_required
+@permission_required("patients.add_consenttoshare", raise_exception=True)
+@require_POST
+def add_consent_view(request, pk):
+    patient = get_object_or_404(Patient, pk=pk)
+    form = ConsentForm(request.POST, actor=request.user)
+    if form.is_valid():
+        try:
+            services.grant_consent(patient, actor=request.user, **form.cleaned_data)
+        except ValidationError as error:
+            _show_errors(request, error)
+        else:
+            messages.success(request, "Freigabe eingetragen.")
+    else:
+        messages.error(request, "Bitte Bereich und Person wählen und das Datum prüfen.")
+    return redirect("patients:detail", pk=patient.pk)
+
+
+@login_required
+@permission_required("patients.change_consenttoshare", raise_exception=True)
+@require_POST
+def end_consent_view(request, pk, consent_pk):
+    consent = get_object_or_404(ConsentToShare, pk=consent_pk, patient_id=pk)
+    try:
+        services.end_consent(consent, actor=request.user)
+    except ValidationError as error:
+        _show_errors(request, error)
+    else:
+        messages.success(request, "Freigabe beendet; ab sofort ohne Wirkung.")
     return redirect("patients:detail", pk=pk)

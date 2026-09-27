@@ -5,8 +5,8 @@ paths:
 # Akte: Kontakte und Karteikarte in Fassungen
 
 Konzept in #23 (Abschnitte 3, 5 und 6), Schnitt und Entscheidungen in #27,
-umgesetzt als K2.1 (#37). K2.2 (#38) bringt Behandlungsteam und
-Schutzstufen, K2.3 (#39) Sperrvermerk und Notfallzugriff.
+umgesetzt als K2.1 (#37) und K2.2 (#38, Behandlungsteam und Schutzstufen).
+K2.3 (#39) bringt Sperrvermerk und Notfallzugriff.
 
 ## Zwei Regeln für alles in `records`
 
@@ -79,24 +79,49 @@ Schutzstufen, K2.3 (#39) Sperrvermerk und Notfallzugriff.
 - Neue Kontakte rufen `patients.services.record_contact` (Aufbewahrung);
   eine Korrektur auf ein späteres Datum schiebt die Frist, eine frühere
   verkürzt sie nie.
-- Schutzstufen außer `normal` weist `create_entry` ab, bis K2.2 sie regelt.
+- `create_entry` nimmt nur Schutzstufen, die der Autor schreiben darf
+  (`access.writable_sensitivities`); ohne Angabe die erste davon, so
+  schreibt Psychologie `psychotherapy` und Suchttherapie `addiction` (#38).
+  Die Schutzstufe bleibt über alle Fassungen gleich. `restricted` weist
+  sie ab, bis K2.3 sie regelt.
 
 ## records/access.py
 
 - Die eine Prüfung. `can_view` ist `visible_to` auf eine Zeile, beide können
   nicht auseinanderlaufen. Was hier nicht geregelt ist, bleibt zu.
-- K2.1: Karteikarte nur für Ärztinnen/Ärzte und MFA (Rechte in
-  `accounts/roles.py`). MFA schreibt und korrigiert eigene Einträge,
-  Ärztinnen/Ärzte alle. Als Irrtum markieren dürfen Autor und
-  Ärztinnen/Ärzte (#27, Frage 2).
+- Zwei Schichten (#23 5.1, 5.2, #38): welche Patienten, dann welche
+  Schutzstufen. Ärztinnen/Ärzte und MFA sehen alle Patienten
+  (`view_all_patients`), Psychologie und Suchttherapie nur im
+  Behandlungsteam, Ernährung und Verwaltung keine Akte. `addiction` sehen
+  Ärztinnen/Ärzte und Suchttherapie; MFA nur als Platzhalter bis K4 (#27,
+  Frage 7). `psychotherapy` sieht nur die behandelnde Person, der Autor der
+  ersten Fassung der Linie, solange er `write_psychotherapy` hat; auch
+  Ärztinnen/Ärzte nicht, sonst wäre die Trennung nach § 203 StGB leer.
+- Eine Freigabe (`patients.ConsentToShare`) öffnet einen Bereich eines
+  Patienten für eine benannte Person, zusätzlich zu Akte und Team, nie
+  statt ihnen.
+- Team und Freigabe gelten an einem Tag in Europe/Berlin
+  (`patients.models.valid_on`); `valid_until` ist der erste Tag ohne
+  Zugang. Wer heute ausgetragen wird, sieht ab sofort nichts mehr.
+- Welche Stufen jemand schreibt, sind eigene Rechte (`write_<stufe>`), weil
+  Lesen und Schreiben auseinanderfallen: Psychologie liest `normal`,
+  schreibt aber nur `psychotherapy`. Korrigieren und als Irrtum markieren
+  dürfen Autor und Ärztinnen/Ärzte (#27, Frage 2), jeweils nur, was sie
+  sehen und dessen Stufe sie schreiben; fremde Psychotherapie-Notizen nur
+  der Autor, denn eine Freigabe öffnet nur zum Lesen. Kontakte sind der Rahmen für alle
+  Stufen und haben selbst immer `normal`.
+- Platzhalter (`hidden_entries`): aktive Einträge, die der Nutzer nicht
+  lesen darf, nur als Zahl je Kontakt („n Einträge mit
+  Zugriffsbeschränkung“, #23 Entscheidung 7), ohne Stufe, Autor oder Kürzel.
 - Eine Linie mit Irrtums-Kopf ist mit allen Fassungen ausgeblendet. Nur
   Ärztinnen/Ärzte sehen sie auf Wunsch (`include_errors`); jede gezeigte
   Irrtums-Fassung ist ein eigener Protokolleintrag.
 
 ## records/views.py
 
-- Reihenfolge: Recht auf die Akte (403), dann Patient und Datensatz nur aus
-  `visible_to` (404, damit Verborgenes nicht auffällt), dann protokollieren.
+- Reihenfolge: Recht auf die Akte (403), Patient (404), Behandlungsteam
+  (403), dann Datensatz nur aus `visible_to` (404, damit Verborgenes nicht
+  auffällt), dann protokollieren.
   Akte öffnen ist `list` auf `records.chartentry` mit `patient_id`.
 - Der Verlauf zeigt Wortunterschiede (`records/diff.py`, `difflib`) und
   geänderte Felder je Fassung.

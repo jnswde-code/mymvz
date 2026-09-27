@@ -95,7 +95,7 @@ Projekt dazukommt:
 
 **`patients`**: Patientenstamm (K1 aus #23)
 - `patients/models.py`: `Patient`, `PatientIdentifier`, `PatientHistory`,
-  `CareTeamMember`
+  `CareTeamMember`, `ConsentToShare` (Freigaben, #38)
 - `patients/services.py`: alle Änderungen, Dublettenhinweis, Suche,
   `retain_until`
 - `patients/views.py`, `patients/forms.py`: Seiten fürs Team unter
