@@ -6,6 +6,8 @@
   <h1>{% if patient.title %}{{ patient.title }} {% endif %}{{ patient.given_name }} {{ patient.family_name }}</h1>
   {% if not patient.is_active %}<p><strong>inaktiv</strong></p>{% endif %}
   {% if patient.deceased_on %}<p><strong>verstorben am {{ patient.deceased_on|date:"d.m.Y" }}</strong></p>{% endif %}
+  {% if patient.is_restricted %}<p><strong>Sperrvermerk:</strong> nur für freigegebene Personen.</p>{% endif %}
+  {% include "patients/_emergency_notices.html" %}
   <dl>
     {% if patient.birth_name %}<dt>Geburtsname</dt><dd>{{ patient.birth_name }}</dd>{% endif %}
     <dt>Geburtsdatum</dt><dd>{{ patient.date_of_birth|date:"d.m.Y" }}</dd>
@@ -16,6 +18,36 @@
   </dl>
   {% if perms.patients.change_patient %}<p><a href="{% url 'patients:edit' patient.pk %}">Stammdaten ändern</a></p>{% endif %}
   {% if sees_chart %}<p><a href="{% url 'records:chart' patient.pk %}">Akte öffnen</a></p>{% endif %}
+
+  <h2>Sperrvermerk und Konto</h2>
+  <p><small>Ein Sperrvermerk schließt Stammdaten und Akte für alle außer namentlich freigegebenen Personen. Wird der Patient mit einem Konto verknüpft (Mitarbeitende als Patienten), wird er automatisch gesetzt.</small></p>
+  <p>
+    Sperrvermerk: {% if patient.is_restricted %}gesetzt{% else %}keiner{% endif %}
+    {% if patient.is_restricted and perms.patients.lift_restriction %}
+      <form method="post" action="{% url 'patients:lift_restriction' patient.pk %}" style="display:inline">
+        {% csrf_token %}<button type="submit">aufheben</button>
+      </form>
+    {% elif not patient.is_restricted and perms.patients.restrict_patient %}
+      <form method="post" action="{% url 'patients:restrict' patient.pk %}" style="display:inline">
+        {% csrf_token %}<button type="submit">setzen</button>
+      </form>
+    {% endif %}
+  </p>
+  <p>
+    Konto: {% if patient.user %}{{ patient.user.get_full_name|default:patient.user.get_username }}{% else %}keins{% endif %}
+    {% if patient.user and perms.patients.link_account %}
+      <form method="post" action="{% url 'patients:unlink_account' patient.pk %}" style="display:inline">
+        {% csrf_token %}<button type="submit">Verknüpfung entfernen</button>
+      </form>
+    {% endif %}
+  </p>
+  {% if link_form %}
+    <form method="post" action="{% url 'patients:link_account' patient.pk %}">
+      {% csrf_token %}
+      {{ link_form.as_p }}
+      <button type="submit">Mit Konto verknüpfen (setzt den Sperrvermerk)</button>
+    </form>
+  {% endif %}
 
   <h2>Kennungen</h2>
   <ul>
@@ -74,7 +106,7 @@
 
   {% if consents is not None %}
     <h2>Freigaben geschützter Bereiche</h2>
-    <p><small>Mit Einwilligung des Patienten: öffnet Sucht oder Psychotherapie für eine benannte Person. Sie braucht weiter Zugang zur Akte und, je nach Beruf, das Behandlungsteam.</small></p>
+    <p><small>Mit Einwilligung des Patienten: öffnet Sucht oder Psychotherapie für eine benannte Person. Sie braucht weiter Zugang zur Akte und, je nach Beruf, das Behandlungsteam. „Sperrvermerk“ öffnet den Patienten trotz Sperrvermerk und die Einträge mit Sperrvermerk.</small></p>
     <ul>
       {% for consent in consents %}
         <li>

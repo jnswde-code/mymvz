@@ -30,8 +30,7 @@ class Status(models.TextChoices):
 
 
 class Sensitivity(models.TextChoices):
-    # Protection levels (#23 section 5.2). `restricted` comes with K2.3 and
-    # is refused until then (`access`).
+    # Protection levels (#23 section 5.2); who reads which: `access`.
     NORMAL = "normal", "normal"
     ADDICTION = "addiction", "Sucht"
     PSYCHOTHERAPY = "psychotherapy", "Psychotherapie"
@@ -269,6 +268,7 @@ class ChartEntry(VersionedRecord):
             ("write_normal", "Einträge der Schutzstufe normal schreiben"),
             ("write_addiction", "Einträge der Schutzstufe Sucht schreiben"),
             ("write_psychotherapy", "Einträge der Schutzstufe Psychotherapie schreiben"),
+            ("write_restricted", "Einträge mit Sperrvermerk schreiben"),
         ]
 
     def __str__(self):

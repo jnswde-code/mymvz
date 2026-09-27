@@ -16,9 +16,9 @@
         <tbody>
           {% for patient in hits %}
             <tr>
-              <td><a href="{% url 'patients:detail' patient.pk %}">{{ patient.family_name }}, {{ patient.given_name }}</a>{% if not patient.is_active %} (inaktiv){% endif %}</td>
+              <td><a href="{% url 'patients:detail' patient.pk %}">{{ patient.family_name }}, {{ patient.given_name }}</a>{% if not patient.is_active %} (inaktiv){% endif %}{% if patient.is_restricted %} <strong>(Sperrvermerk)</strong>{% endif %}</td>
               <td>{{ patient.date_of_birth|date:"d.m.Y" }}</td>
-              <td>{% for identifier in patient.current_identifier_list %}{{ identifier.value }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+              <td>{% if not patient.is_restricted %}{% for identifier in patient.current_identifier_list %}{{ identifier.value }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</td>
             </tr>
           {% endfor %}
         </tbody>

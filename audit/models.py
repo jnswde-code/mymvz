@@ -14,6 +14,8 @@ class Action(models.TextChoices):
     EXPORT = "export", "exportiert"
     PRINT = "print", "gedruckt"
     DOWNLOAD = "download", "heruntergeladen"
+    # The reason stays in `patients.EmergencyAccess`, never here (#39).
+    EMERGENCY_ACCESS = "emergency_access", "Notfallzugriff"
 
 
 class AccessLogEntry(models.Model):

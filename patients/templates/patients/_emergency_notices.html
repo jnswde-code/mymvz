@@ -1,0 +1,10 @@
+{% comment %}Emergency accesses shown to persons released for the patient (#39): `emergency_notices`.{% endcomment %}
+{% if emergency_notices %}
+  <h2>Notfallzugriffe</h2>
+  <p><small>Sie sind für diesen Patienten freigegeben und sehen deshalb, wer ihn im Notfall geöffnet hat.</small></p>
+  <ul>
+    {% for emergency in emergency_notices %}
+      <li>{{ emergency.valid_from|date:"d.m.Y H:i" }} von {{ emergency.user.get_full_name|default:emergency.user.get_username }}: {{ emergency.reason }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}

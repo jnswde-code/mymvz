@@ -86,7 +86,7 @@ Projekt dazukommt:
 
 **`audit`**: Zugriffsprotokoll
 - `audit/models.py`: `AccessLogEntry`; `audit/log.py`: `log_access`
-- `audit/views.py`: Protokoll für die Verwaltung
+- `audit/views.py`: Protokoll und Notfallzugriffe für die Verwaltung
 - `tests/test_audit.py`
 
 **`practice`**: Praxis als Stammdaten
@@ -96,8 +96,9 @@ Projekt dazukommt:
 - `tests/test_practice.py`
 
 **`patients`**: Patientenstamm (K1 aus #23)
-- `patients/models.py`: `Patient`, `PatientIdentifier`, `PatientHistory`,
-  `CareTeamMember`, `ConsentToShare` (Freigaben, #38)
+- `patients/models.py`: `Patient` (mit Sperrvermerk und Konto, #39),
+  `PatientIdentifier`, `PatientHistory`, `CareTeamMember`, `ConsentToShare`
+  (Freigaben, #38), `EmergencyAccess` (Notfallzugriff, #39)
 - `patients/services.py`: alle Änderungen, Dublettenhinweis, Suche,
   `retain_until`
 - `patients/views.py`, `patients/forms.py`: Seiten fürs Team unter

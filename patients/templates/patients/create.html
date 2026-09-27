@@ -11,7 +11,7 @@
       <p>Gleiches Geburtsdatum und ähnlicher Name. Bitte prüfen, ob die Person schon angelegt ist.</p>
       <ul>
         {% for patient in duplicates %}
-          <li><a href="{% url 'patients:detail' patient.pk %}">{{ patient.family_name }}, {{ patient.given_name }}</a>{% if patient.birth_name %} geb. {{ patient.birth_name }}{% endif %}, {{ patient.date_of_birth|date:"d.m.Y" }}</li>
+          <li><a href="{% url 'patients:detail' patient.pk %}">{{ patient.family_name }}, {{ patient.given_name }}</a>{% if patient.is_restricted %} <strong>(Sperrvermerk)</strong>{% elif patient.birth_name %} geb. {{ patient.birth_name }}{% endif %}, {{ patient.date_of_birth|date:"d.m.Y" }}</li>
         {% endfor %}
       </ul>
     </section>

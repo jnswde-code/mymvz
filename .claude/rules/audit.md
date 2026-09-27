@@ -17,6 +17,8 @@ paths:
   nur nach Frist: 1 Jahr für Anfragen (#5, Löschlauf in #9), für die Akte
   3 Jahre (#23, Entscheidung 10).
 - Suchen: nur die Trefferzahl, nie der Suchbegriff.
+- `emergency_access` (#39) zeigt auf den `patients.EmergencyAccess`; der
+  Grund steht nur dort.
 
 ## audit/log.py
 
@@ -30,3 +32,8 @@ paths:
 
 - Nur die Verwaltung liest das Protokoll (#23 Abschnitt 5.1), und auch das
   wird protokolliert.
+- Die Liste der Notfallzugriffe (#39) zeigt als einzige Stelle neben der
+  Akte der Freigegebenen den Grund, dazu Name und Geburtsdatum, damit die
+  Verwaltung Missbrauch prüfen kann. Dafür liest die Ansicht
+  `patients.EmergencyAccess`; das Modell `audit` kennt `patients` weiter
+  nicht.

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Notfallzugriffe – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  <h1>Notfallzugriffe</h1>
+  <p><small>Ärztinnen und Ärzte öffnen damit einen Sperrvermerk bis zur Zeit unter „bis“. Jeder Zugriff in dieser Zeit steht außerdem im <a href="{% url 'audit:log' %}">Zugriffsprotokoll</a>.</small></p>
+  <table>
+    <thead>
+      <tr><th>von</th><th>bis</th><th>Konto</th><th>Patient</th><th>Patient-ID</th><th>Grund</th></tr>
+    </thead>
+    <tbody>
+      {% for emergency in page %}
+        <tr>
+          <td>{{ emergency.valid_from|date:"d.m.Y H:i" }}</td>
+          <td>{{ emergency.valid_until|date:"H:i" }}</td>
+          <td>{{ emergency.user.get_username }}</td>
+          <td>{{ emergency.patient.family_name }}, {{ emergency.patient.given_name }} ({{ emergency.patient.date_of_birth|date:"d.m.Y" }})</td>
+          <td>{{ emergency.patient_id }}</td>
+          <td>{{ emergency.reason }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">keine</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if page.has_previous %}<a href="?stand={{ as_of|urlencode }}&seite={{ page.previous_page_number }}">neuer</a>{% endif %}
+  {% if page.has_next %}<a href="?stand={{ as_of|urlencode }}&seite={{ page.next_page_number }}">älter</a>{% endif %}
+{% endblock %}
