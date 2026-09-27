@@ -20,7 +20,14 @@ from django.urls import reverse
 from django.utils import timezone
 
 from appointments import deadlines, tokens
-from appointments.models import Appointment, AppointmentRequest, TokenPurpose
+from appointments.models import (
+    Appointment,
+    AppointmentEvent,
+    AppointmentRequest,
+    Reason,
+    RequestStatus,
+    TokenPurpose,
+)
 from practice import info
 
 VERIFY_EMAIL = "verify_email"
@@ -81,6 +88,22 @@ def _links(kind, request, appointment, now) -> dict:
     return {}
 
 
+def _extra(kind, request) -> dict:
+    """What a mail needs besides links: the decline reason, the team's list."""
+    if kind == DECLINED:
+        event = (
+            AppointmentEvent.objects.filter(request=request, to_status=RequestStatus.DECLINED)
+            .order_by("-at")
+            .first()
+        )
+        # Only the fixed reason picks the text; nothing the team typed (#3 section 2).
+        return {"reason": event.reason if event else Reason.OTHER}
+    if kind in TO_PRACTICE:
+        # Only the address of the list, never one of a request (#8).
+        return {"backoffice_url": settings.SITE_BASE_URL + reverse("appointments_staff:list")}
+    return {}
+
+
 def send(kind: str, request_id, appointment_id=None) -> bool:
     """Render and send one mail; False if there is nobody to send it to."""
     request = AppointmentRequest.objects.filter(pk=request_id).first()
@@ -106,6 +129,7 @@ def send(kind: str, request_id, appointment_id=None) -> bool:
                 settings.APPOINTMENTS_CANCELLATION_NOTICE.total_seconds() // 3600
             ),
             **_links(kind, request, appointment, now),
+            **_extra(kind, request),
         }
         if appointment is not None and appointment.proposal_expires_at:
             context["proposal_expires_at"] = timezone.localtime(appointment.proposal_expires_at)

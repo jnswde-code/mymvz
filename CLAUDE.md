@@ -118,6 +118,8 @@ Projekt dazukommt:
 - `appointments/tokens.py`, `appointments/mail.py`: Links und Mails
 - `appointments/captcha.py`, `appointments/spam.py`: Schutz vor Spam
 - `appointments/views.py`, `appointments/forms.py`: Formular und Link-Seiten
+- `appointments/staff_views.py`, `staff_forms.py`, `staff_urls.py`: Anfragen
+  fürs Team unter `/anfragen/`
 - `tests/test_appointments_*.py`, `tests/factories.py`, `tests/conftest.py`
 
 **`reporting`**: Zählerstände ohne Personenbezug

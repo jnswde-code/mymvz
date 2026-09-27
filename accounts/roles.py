@@ -32,10 +32,13 @@ _MASTER_DATA_EDIT = ["patients.view_patient", "patients.add_patient", "patients.
 _MASTER_DATA_READ = ["patients.view_patient"]
 _CHART_MFA = ["records.view_chartentry", "records.add_chartentry"]
 _CHART_DOCTOR = [*_CHART_MFA, "records.change_chartentry", "records.view_entered_in_error"]
+# Appointment requests: doctors and MFA see and answer them, nobody else
+# (#8, decision 1). "change" covers every step and the internal note.
+_REQUESTS = ["appointments.view_appointmentrequest", "appointments.change_appointmentrequest"]
 
 ROLE_PERMISSIONS = {
-    DOCTOR: [*_MASTER_DATA_EDIT, *_CHART_DOCTOR],
-    MFA: [*_MASTER_DATA_EDIT, *_CHART_MFA],
+    DOCTOR: [*_MASTER_DATA_EDIT, *_CHART_DOCTOR, *_REQUESTS],
+    MFA: [*_MASTER_DATA_EDIT, *_CHART_MFA, *_REQUESTS],
     ADMINISTRATION: ["audit.view_accesslogentry", *_MASTER_DATA_EDIT],
     PSYCHOLOGY: _MASTER_DATA_READ,
     ADDICTION_THERAPY: _MASTER_DATA_READ,

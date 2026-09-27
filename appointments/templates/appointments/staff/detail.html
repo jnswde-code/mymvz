@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Anfrage {{ req.reference }} – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  <p><a href="{% url 'appointments_staff:list' %}">Zur Liste</a></p>
+  <h1>Anfrage {{ req.reference }}</h1>
+  <p>
+    <strong>{{ req.get_status_display }}</strong>
+    · eingegangen {{ req.created_at|date:"d.m.Y H:i" }} über {{ req.get_channel_display }}
+    {% if req.status == "open" %}· offen seit {{ req.open_working_days }} Werktag{{ req.open_working_days|pluralize:"e" }}{% endif %}
+  </p>
+  {% if req.flags %}<p>Hinweise: <strong>{{ req.flags|join:", " }}</strong></p>{% endif %}
+  {% if not req.email %}
+    <p role="note"><strong>Keine E-Mail-Adresse:</strong> Das Ergebnis bitte telefonisch mitteilen, {{ req.phone }}.</p>
+  {% endif %}
+
+  <h2>Für Medical Office</h2>
+  <pre>{{ req.patient_last_name }}, {{ req.patient_first_name }}
+{{ req.patient_date_of_birth|date:"d.m.Y" }}
+{{ req.get_insurance_type_display }}
+{{ req.phone }}
+{{ req.appointment_type.name }}{% if active_appointment %}
+{{ active_appointment.start|date:"D d.m.Y H:i" }}–{{ active_appointment.end|date:"H:i" }} ({{ active_appointment.get_status_display }}){% endif %}</pre>
+
+  <h2>Angaben</h2>
+  <dl>
+    <dt>Patientin/Patient</dt><dd>{{ req.patient_first_name }} {{ req.patient_last_name }}, geb. {{ req.patient_date_of_birth|date:"d.m.Y" }}</dd>
+    <dt>Schon Patient hier</dt><dd>{{ req.is_existing_patient|yesno:"ja,nein" }}</dd>
+    <dt>Versicherung</dt><dd>{{ req.get_insurance_type_display }}</dd>
+    <dt>Terminart</dt><dd>{{ req.appointment_type.name }}</dd>
+    <dt>Wunsch Ärztin/Arzt</dt><dd>{{ req.preferred_resource.name|default:"keine Angabe" }}</dd>
+    <dt>Telefon</dt><dd>{{ req.phone }}</dd>
+    <dt>E-Mail</dt><dd>{{ req.email|default:"keine" }}</dd>
+    {% if req.contact_name %}<dt>Angefragt von</dt><dd>{{ req.contact_name }} ({{ req.contact_relationship }})</dd>{% endif %}
+    <dt>Notiz der Patientin/des Patienten</dt><dd>{{ req.note|default:"keine"|linebreaksbr }}</dd>
+  </dl>
+
+  <h2>Wunschtermine</h2>
+  <ol>
+    {% for window in time_windows %}<li>{{ window.date|date:"l, d.m.Y" }}, {{ window.get_part_of_day_display }}</li>{% endfor %}
+  </ol>
+
+  {% if active_appointment %}
+    <h2>Termin</h2>
+    <p>
+      {{ active_appointment.start|date:"l, d.m.Y H:i" }}–{{ active_appointment.end|date:"H:i" }} Uhr,
+      {{ active_appointment.get_status_display }}{% if active_appointment.proposal_expires_at %}, Antwort bis {{ active_appointment.proposal_expires_at|date:"d.m.Y H:i" }} Uhr{% endif %}
+    </p>
+  {% endif %}
+
+  {% if perms.appointments.change_appointmentrequest %}
+    {% if req.status == "open" %}
+      <h2>Beantworten</h2>
+      <form method="post" action="{% url 'appointments_staff:confirm' req.pk %}">
+        {% csrf_token %}
+        {{ appointment_form.as_p }}
+        <button type="submit">Termin bestätigen</button>
+        {% if req.email %}
+          <button type="submit" formaction="{% url 'appointments_staff:propose' req.pk %}">Als Vorschlag senden</button>
+        {% else %}
+          <span>Vorschlag nur mit E-Mail-Adresse; bitte anrufen und bestätigen.</span>
+        {% endif %}
+      </form>
+      <form method="post" action="{% url 'appointments_staff:decline' req.pk %}">
+        {% csrf_token %}
+        {{ decline_form.as_p }}
+        <button type="submit">Ablehnen</button>
+      </form>
+    {% endif %}
+
+    <h2>Interne Notiz</h2>
+    <form method="post" action="{% url 'appointments_staff:note' req.pk %}">
+      {% csrf_token %}
+      {{ note_form.as_p }}
+      <button type="submit">Notiz speichern</button>
+    </form>
+  {% elif req.staff_note %}
+    <h2>Interne Notiz</h2>
+    <p>{{ req.staff_note|linebreaksbr }}</p>
+  {% endif %}
+
+  <h2>Verlauf</h2>
+  <table>
+    <thead><tr><th>Zeit</th><th>von</th><th>Schritt</th><th>Grund</th></tr></thead>
+    <tbody>
+      {% for event in events %}
+        <tr>
+          <td>{{ event.at|date:"d.m.Y H:i" }}</td>
+          <td>{{ event.get_actor_kind_display }}{% if event.actor %} ({{ event.actor.get_username }}){% endif %}</td>
+          <td>{% if event.appointment_id %}Termin: {% endif %}{{ event.from_label }} → {{ event.to_label }}</td>
+          <td>{{ event.get_reason_display }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

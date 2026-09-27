@@ -1,4 +1,4 @@
 {% autoescape off %}Guten Tag,
 
-Ihre Terminanfrage können wir leider nicht über die Website vergeben. Bitte rufen Sie uns an, damit wir gemeinsam einen passenden Termin finden: {{ practice.phone }}.
+{% if reason == "please_call" %}zu Ihrer Terminanfrage möchten wir gern kurz mit Ihnen sprechen, bevor wir einen Termin vergeben. Bitte rufen Sie uns an: {{ practice.phone }}.{% elif reason == "not_bookable_online" %}Ihre Terminanfrage können wir leider nicht über die Website vergeben. Bitte rufen Sie uns an, damit wir gemeinsam einen passenden Termin finden: {{ practice.phone }}.{% else %}Ihre Terminanfrage können wir leider nicht wie gewünscht vergeben. Bitte rufen Sie uns an, damit wir gemeinsam eine Lösung finden: {{ practice.phone }}.{% endif %}
 {% include "appointments/mail/_footer.txt" %}{% endautoescape %}

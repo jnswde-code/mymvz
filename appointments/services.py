@@ -19,8 +19,14 @@ from django.db.models import Max
 from django.utils import timezone
 
 from appointments import mail, tokens
-from appointments.deadlines import add_working_days, days_later, latest_request_date
+from appointments.deadlines import (
+    add_working_days,
+    days_later,
+    latest_request_date,
+    working_days_between,
+)
 from appointments.models import (
+    DECLINE_REASONS,
     PATIENT_CANCELLATION_REASONS,
     Appointment,
     AppointmentEvent,
@@ -42,6 +48,7 @@ AStatus = Appointment.Status
 
 MAX_TIME_WINDOWS = 3
 MAX_AGE_YEARS = 130
+ADULT_AGE = 18
 
 # Who acts for each channel when a request is created.
 _CREATOR = {
@@ -467,7 +474,17 @@ def confirm_request(request, start, *, actor, end=None, resources=()) -> Appoint
 
 @transaction.atomic
 def propose_appointment(request, start, *, actor, end=None, resources=()) -> Appointment:
-    """open → scheduled with a proposal the patient has to accept (#5, decision 4)."""
+    """open → scheduled with a proposal the patient has to accept (#5, decision 4).
+
+    Not without an e-mail address: nobody could accept, the proposal would
+    lapse after its deadline and the request reopen (#8, decision 4). The
+    team calls and confirms instead.
+    """
+    if not request.email:
+        raise ValidationError(
+            "Ohne E-Mail-Adresse kann niemand den Vorschlag annehmen. "
+            "Bitte anrufen und einen Termin bestätigen."
+        )
     request, appointment = _schedule(
         request, start, actor=actor, end=end, resources=resources, status=AStatus.PROPOSED
     )
@@ -477,9 +494,9 @@ def propose_appointment(request, start, *, actor, end=None, resources=()) -> App
 
 @transaction.atomic
 def decline_request(request, *, actor, reason=Reason.PLEASE_CALL) -> AppointmentRequest:
-    """open → declined, with the text "please call us"."""
+    """open → declined; the mail text depends on the reason (#8)."""
     _require_staff(actor)
-    if reason not in (Reason.PLEASE_CALL, Reason.NOT_BOOKABLE_ONLINE, Reason.OTHER):
+    if reason not in DECLINE_REASONS:
         raise ValidationError({"reason": "Unbekannter Grund."})
     request = _lock(request)
     _require(request.status, Status.OPEN)
@@ -565,6 +582,87 @@ def cancel_appointment(
     if cancelled_by == Appointment.CancelledBy.PRACTICE and from_status == AStatus.BOOKED:
         mail.queue(mail.CANCELLED_BY_PRACTICE, request, appointment)
     return appointment
+
+
+@transaction.atomic
+def set_staff_note(request, text: str, *, actor) -> AppointmentRequest:
+    """Internal note of the team; never in e-mails. No status change, no event."""
+    _require_staff(actor)
+    request = _lock(request)
+    request.staff_note = text.strip()
+    request.save(update_fields=["staff_note", "updated_at"])
+    log_access(actor, "update", request)
+    return request
+
+
+# --- Reading for the team (#8) ----------------------------------------------
+
+
+def staff_visible():
+    """Requests the practice may see: not before the e-mail is confirmed (#5)."""
+    return AppointmentRequest.objects.exclude(status=Status.UNVERIFIED)
+
+
+def list_requests(actor, *, status=Status.OPEN, needs_callback=False) -> list:
+    """Requests for the team's list; one `list` entry in the access log, not one per row.
+
+    `status=None` lists every visible status, newest first; a single status
+    lists the oldest first, as that one waits longest. `needs_callback`
+    keeps only requests without an e-mail address, which nobody can answer
+    by mail (#8, decision 3).
+    """
+    _require_staff(actor)
+    requests = staff_visible().select_related("appointment_type", "preferred_resource")
+    if status is not None:
+        requests = requests.filter(status=status).order_by("created_at")
+    else:
+        requests = requests.order_by("-created_at")
+    if needs_callback:
+        requests = requests.filter(email="")
+    requests = list(requests.prefetch_related("time_windows"))
+    log_access(actor, "list", AppointmentRequest, result_count=len(requests))
+    return requests
+
+
+def get_request(pk, actor) -> AppointmentRequest:
+    """One request for the team, logged as `view`; `DoesNotExist` if not visible."""
+    _require_staff(actor)
+    request = staff_visible().select_related("appointment_type", "preferred_resource").get(pk=pk)
+    log_access(actor, "view", request, patient_id=request.patient_id)
+    return request
+
+
+def visible_since(request):
+    """Since when the practice sees the request: after the e-mail check, if any."""
+    return request.email_verified_at or request.created_at
+
+
+def request_flags(request, today) -> list[str]:
+    """Hints for the triage (#14 section 3.3, #8). `today` in Europe/Berlin.
+
+    "für ein Kind" means under 18 on the day shown (#8, decision 5), as a
+    hint only; "für andere Person" shows whenever someone else asked.
+    """
+    flags = []
+    if request.channel == Channel.PHONE_ASSISTANT:
+        flags.append("Telefon")
+    if age_on(request.patient_date_of_birth, today) < ADULT_AGE:
+        flags.append("für ein Kind")
+    if request.contact_name:
+        flags.append("für andere Person")
+    if not request.email:
+        flags.append("ohne E-Mail – Rückruf nötig")
+    return flags
+
+
+def age_on(born, day) -> int:
+    """Full years on `day`. Born on 29 February: a year older from 1 March."""
+    return day.year - born.year - ((day.month, day.day) < (born.month, born.day))
+
+
+def open_working_days(request, today) -> int:
+    """Working days since the practice sees the request (#8, decision 8)."""
+    return working_days_between(timezone.localdate(visible_since(request)), today)
 
 
 # --- Runs of the system (called by the worker, #9) ---------------------------
