@@ -1,6 +1,6 @@
 ---
 name: wellen-organisation
-description: Ablauf für die Organisations-Session. Offene Issues sichten und auf Stand bringen, Entscheidungen des Nutzers bündeln, parallele Claude-Sessions in Wellen planen (Kennungen, Prompts, Modellwahl, Parallelität nach Datei-Überschneidungen), sie per /loop samt Claude-Kontingenten überwachen, Merges und Deploys über die Freigaben des Nutzers führen, aufräumen und nach jeder Welle einen Report schreiben (in der Welle erledigt, heute erledigt, bewusst nicht jetzt, als Nächstes). Verwenden, wenn der Nutzer Issues durchgehen, sortieren oder reduzieren will, fragt, welche Sessions er jetzt parallel starten kann oder was als Nächstes dran ist, eine Welle starten, überwachen oder abschließen will, nach Kontingent oder Verbrauch fragt, Sessions umbenennen oder archivieren lassen will, oder fragt, was heute erledigt wurde – auch wenn das Wort „Welle“ nicht fällt.
+description: Ablauf für die Organisations-Session. Offene Issues sichten und auf Stand bringen, Entscheidungen des Nutzers bündeln, große Vorhaben in Sub-Issues schneiden, parallele Claude-Sessions in Wellen planen (Kennungen, Prompts, Modellwahl, Parallelität nach Datei-Überschneidungen), sie per /loop samt Claude-Kontingenten überwachen, Merges und Deploys über die Freigaben des Nutzers führen, aufräumen und nach jeder Welle einen Report schreiben (in der Welle erledigt, heute erledigt, bewusst nicht jetzt, als Nächstes). Verwenden, wenn der Nutzer Issues durchgehen, sortieren oder reduzieren will, fragt, welche Sessions er jetzt parallel starten kann oder was als Nächstes dran ist, ein großes Vorhaben aufteilen will, eine Welle starten, überwachen oder abschließen will, nach Kontingent oder Verbrauch fragt, Sessions umbenennen oder archivieren lassen will, oder fragt, was heute erledigt wurde – auch wenn das Wort „Welle“ nicht fällt.
 ---
 
 # Wellen-Organisation
@@ -84,6 +84,7 @@ geschlossene Issues) und einordnen:
   `<details><summary>Ursprüngliche Fassung</summary>` darunter stehen lassen.
 - **blockiert:** durch eine Entscheidung, einen Zugang, eine andere Session
   oder ein anderes Issue. Immer benennen, woran genau.
+- **zu groß** (Maß in 5): in Sub-Issues schneiden.
 - **frei:** sofort bearbeitbar.
 
 **Schließen, Zusammenlegen und Neufassen erst nach dem Okay des Nutzers.**
@@ -119,8 +120,9 @@ Issue** und ins Memory, damit die ausführende Session sie dort findet.
 
 ## 5. Welle planen
 
-- **Kennungen:** je Session ein Buchstabe (A, B, … oder F1, F2 für
-  zusammengehörige Schritte). Der Session-Titel lautet `<Kennung> · #<Issues>`.
+- **Kennungen:** je Session ein Buchstabe (A, B, … oder F1, F2 für die
+  Sub-Issues eines Vorhabens, je Vorhaben ein eigener Buchstabe). Der
+  Session-Titel lautet `<Kennung> · #<Issues>`.
   Die App vergibt den Titel selbst aus dem ersten Satz. Deshalb steht die
   Kennung vorne im Prompt, und die Organisations-Session benennt jede neue
   Session per `set_session_title` um, sobald sie auftaucht.
@@ -129,8 +131,31 @@ Issue** und ins Memory, damit die ausführende Session sie dort findet.
 - **Prompt-Muster:**
   - Umsetzung: `<K> · Bearbeite Issue #N. Der Kommentar „Stand <Datum>“ enthält den Stand.`
   - Konzept: `<K> · Erarbeite das Konzept für #N, wie im Issue beschrieben. Schreib es als Kommentar ins Issue und halte dann an. Noch nichts umsetzen.`
+  - Konzept mit Schnitt: wie Konzept, dazu `Schließ es mit dem Schnitt in Sub-Issues nach Abschnitt 5 des Skills wellen-organisation ab.`
 - **Konzept und Umsetzung in getrennten Sessions.** Ein Modellwechsel mitten
   in der Session liest den ganzen Kontext ungecacht neu ein.
+- **Große Vorhaben schneiden.** Passt ein Vorhaben nicht in einen PR/MR, den
+  `/code-review` vollständig prüft und den eine Session ohne Zusammenfassung
+  ihres Kontexts schafft, wird sein Issue zum Eltern-Issue. Die Konzept-Session
+  (Prompt „Konzept mit Schnitt“) schließt ihr Konzept dann mit dem Schnitt ab:
+  Sub-Issues mit Titel, Reihenfolge und Abhängigkeiten. Nach der Freigabe der
+  Titel (2) legt die Organisations-Session sie an. GitHub:
+  `gh issue create --parent <N>`, bestehende mit
+  `gh issue edit <N> --add-sub-issue <n>,<m>`; kennt `gh` die Flags nicht, ist
+  es zu alt. GitLab: Tasks als Child Items am Issue, mit Premium auch Issues
+  unter einem Epic. Ohne Werkzeug dafür genügt „Teil von #N“ (unten).
+  - **Vertikal:** Jedes Sub-Issue liefert fertiges Verhalten, das sich von
+    außen testen lässt. Nicht erst Datenmodell, dann Oberfläche, dann
+    Schnittstellen; solche Teile liegen halb fertig in `main`.
+  - **Nicht zu klein:** Jedes Sub-Issue kostet einen PR/MR, ein Review, eine
+    Merge-Freigabe des Nutzers und die Startkosten einer Session.
+  - **Eine Quelle:** Das Konzept und Entscheidungen für das ganze Vorhaben
+    stehen nur im Eltern-Issue. Das Sub-Issue beginnt mit „Teil von #N“ und
+    beschreibt nur seinen Teil. Die ausführende Session liest das Eltern-Issue
+    mit.
+  - **Reihenfolge:** Baut ein Sub-Issue auf einem anderen auf oder teilt es
+    Dateien mit ihm, ist dessen Merge die Startbedingung. Parallel laufen dann
+    Sub-Issues verschiedener Vorhaben.
 - **Nicht in eine Welle:** große Umbauten, die fast jede Datei berühren, und
   alles, was eine Entscheidung des Nutzers braucht.
 - **Kapazität:** Läuft alles auf einem kleinen Server, je Session etwa 300 MB
@@ -191,7 +216,8 @@ Ergebnis in einem Satz ins Issue.
 **Nach jeder Welle** schreibt die Organisations-Session einen Report in den
 Chat. Quellen, damit nichts aus dem Gedächtnis kommt: `git log --first-parent
 --since="<heute> 00:00" origin/main`, heute geschlossene Issues, Deploys,
-der Wellenplan im Memory.
+der Stand der Sub-Issues je Eltern-Issue (GitHub:
+`gh issue view <N> --json subIssuesSummary`), der Wellenplan im Memory.
 
 ```
 ## Wellen-Report – Welle <n>, <Datum>, <Uhrzeit> Uhr
@@ -202,6 +228,7 @@ der Wellenplan im Memory.
 
 ### Heute insgesamt erledigt
 - **Geschlossen:** #…, #… (je ein Halbsatz, was es bringt)
+- **Vorhaben:** #N <Kurzname>: x von y Sub-Issues erledigt (nur, was heute vorankam)
 - **Deploys:** …
 - **Außerdem:** Handgriffe und Aufräumarbeiten
 - **Kontingente:** Woche <x> % (<t> Punkte je Stunde, hochgerechnet <h> % am Reset), Reset <Tag Uhrzeit>

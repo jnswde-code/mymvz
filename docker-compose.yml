@@ -27,5 +27,29 @@ services:
       db:
         condition: service_healthy
 
+  # Voice agent (#13) with a LiveKit server for development. Profile
+  # `voice`, so `docker compose up` still starts only the website.
+  livekit:
+    image: livekit/livekit-server:v1.13.7
+    profiles: [voice]
+    command: --dev --bind 0.0.0.0 --node-ip 127.0.0.1
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}"
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+
+  voice:
+    build:
+      context: ./voice
+      target: dev
+    profiles: [voice]
+    env_file: .env
+    volumes:
+      - ./voice:/app
+    depends_on:
+      - livekit
+
 volumes:
   pgdata:
