@@ -29,6 +29,7 @@ from appointments.deadlines import (
 from appointments.models import (
     DECLINE_REASONS,
     PATIENT_CANCELLATION_REASONS,
+    PRACTICE_CANCELLATION_REASONS,
     Appointment,
     AppointmentEvent,
     AppointmentRequest,
@@ -571,8 +572,14 @@ def cancel_appointment(
     _require_staff(actor)
     if cancelled_by == Appointment.CancelledBy.SYSTEM:
         raise ValueError("Absagen durch das System laufen über expire_overdue_proposals.")
-    if reason and reason not in Reason.values:
-        raise ValidationError({"reason": "Unbekannter Grund."})
+    # Only the reasons of the cancelling party; a system or decline reason
+    # on a phone cancellation would mislead events and reports.
+    if cancelled_by == Appointment.CancelledBy.PATIENT:
+        allowed = PATIENT_CANCELLATION_REASONS
+    else:
+        allowed = [*PRACTICE_CANCELLATION_REASONS, Reason.PROPOSAL_WITHDRAWN]
+    if reason and reason not in allowed:
+        raise ValidationError({"reason": "Dieser Grund passt nicht zu dieser Absage."})
     appointment = _lock_appointment(appointment)
     request = _lock(appointment.request)
     from_status = appointment.status
@@ -599,16 +606,23 @@ def cancel_appointment(
 # --- Medical Office (#8, decision 2) -----------------------------------------
 
 
+# Cancelled proposals were never booked, so never in Medical Office.
+PROPOSAL_ENDINGS = (Reason.PROPOSAL_DECLINED, Reason.PROPOSAL_EXPIRED, Reason.PROPOSAL_WITHDRAWN)
+
+
 @transaction.atomic
 def mark_entered_in_medical_office(appointment, *, actor) -> Appointment:
     """The team has entered a booked appointment in Medical Office.
 
-    Only once, and only while it is booked: a cancelled one no longer
-    needs entering. No status change, no event; the access log keeps who.
+    Only once. Also for an appointment cancelled meanwhile: the tick reports
+    what the team already did, and only then does the cancelled slot appear
+    under "auszutragen". No status change, no event; the access log keeps who.
     """
     _require_staff(actor)
     appointment = _lock_appointment(appointment)
-    _require(appointment.status, AStatus.BOOKED)
+    _require(appointment.status, AStatus.BOOKED, AStatus.CANCELLED)
+    if appointment.cancellation_reason in PROPOSAL_ENDINGS:
+        raise TransitionNotAllowed("Ein Vorschlag war nie gebucht.")
     if appointment.medical_office_entered_at is not None:
         raise TransitionNotAllowed("Schon in Medical Office eingetragen.")
     appointment.medical_office_entered_at = timezone.now()
@@ -721,11 +735,18 @@ def list_appointments(
             end__gt=now,
         ).order_by("start")
     elif cancelled_by_patient_since is not None:
-        appointments = appointments.filter(
-            status=AStatus.CANCELLED,
-            cancelled_by=Appointment.CancelledBy.PATIENT,
-            cancelled_at__gte=cancelled_by_patient_since,
-        ).order_by("-cancelled_at")
+        appointments = (
+            appointments.filter(
+                status=AStatus.CANCELLED,
+                cancelled_by=Appointment.CancelledBy.PATIENT,
+                cancelled_at__gte=cancelled_by_patient_since,
+            )
+            .exclude(
+                # A declined proposal was never booked, so it is no cancellation.
+                cancellation_reason=Reason.PROPOSAL_DECLINED
+            )
+            .order_by("-cancelled_at")
+        )
     else:
         appointments = appointments.filter(status__in=Appointment.ACTIVE, end__gt=now).order_by(
             "start"

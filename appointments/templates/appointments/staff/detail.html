@@ -61,6 +61,9 @@
               {% if perms.appointments.change_appointmentrequest %}
                 {% if appointment.status == "booked" and not appointment.medical_office_entered_at %}
                   <form method="post" action="{% url 'appointments_staff:entered' req.pk appointment.pk %}">{% csrf_token %}<button type="submit">In Medical Office eingetragen</button></form>
+                {% elif appointment.status == "cancelled" and not appointment.medical_office_entered_at and appointment.cancellation_reason != "proposal_declined" and appointment.cancellation_reason != "proposal_expired" and appointment.cancellation_reason != "proposal_withdrawn" %}
+                  {# Cancelled before the tick; if it was entered anyway, record it so it can be removed. #}
+                  <form method="post" action="{% url 'appointments_staff:entered' req.pk appointment.pk %}">{% csrf_token %}<button type="submit">War schon in Medical Office eingetragen</button></form>
                 {% elif appointment.status == "cancelled" and appointment.medical_office_entered_at and not appointment.medical_office_removed_at %}
                   <form method="post" action="{% url 'appointments_staff:removed' req.pk appointment.pk %}">{% csrf_token %}<button type="submit">Aus Medical Office ausgetragen</button></form>
                 {% endif %}

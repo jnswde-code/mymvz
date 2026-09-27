@@ -13,6 +13,7 @@ from appointments.models import (
     PRACTICE_CANCELLATION_REASONS,
 )
 from patients.models import Patient
+from patients.services import name_terms
 
 STAFF_NOTE_MAX_LENGTH = 2000
 
@@ -79,6 +80,9 @@ def _reason_choices(reasons):
 class PracticeCancelForm(forms.Form):
     """The practice cancels a booked appointment; the patient gets a mail."""
 
+    # Both cancel forms share a page; without prefixes their ids collide.
+    prefix = "praxis"
+
     reason = forms.ChoiceField(
         choices=_reason_choices(PRACTICE_CANCELLATION_REASONS),
         widget=forms.RadioSelect,
@@ -91,6 +95,8 @@ class PracticeCancelForm(forms.Form):
 
 class PhoneCancelForm(forms.Form):
     """A patient called to cancel; no mail goes out."""
+
+    prefix = "telefon"
 
     reason = forms.ChoiceField(
         choices=_reason_choices(PATIENT_CANCELLATION_REASONS),
@@ -128,14 +134,15 @@ class MedicalOfficeForm(forms.Form):
 
 
 class PatientSearchForm(forms.Form):
-    """Search in the patient records from a request; prefilled from the snapshot."""
+    """Search in the patient records from a request."""
 
     name = forms.CharField(max_length=200, required=False, label="Name")
     geburtsdatum = forms.DateField(widget=DateInput(), required=False, label="Geburtsdatum")
 
     def has_terms(self) -> bool:
+        # Same rule as `search_patients`: a name of only separators is no term.
         return self.is_valid() and bool(
-            self.cleaned_data["name"].strip() or self.cleaned_data["geburtsdatum"]
+            name_terms(self.cleaned_data["name"]) or self.cleaned_data["geburtsdatum"]
         )
 
 
