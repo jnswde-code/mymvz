@@ -5,5 +5,6 @@ Im Notfall wählen Sie die 112, nachts und am Wochenende den ärztlichen Bereits
 
 {{ practice.name }}
 {{ practice.street }}, {{ practice.city }}
+Datenschutzhinweis: {{ privacy_url }}
 
 Diese E-Mail wurde automatisch erstellt. Bitte antworten Sie nicht darauf und schicken Sie uns keine Befunde per E-Mail.

@@ -4,6 +4,9 @@ The team's views belong to #8. No login here; a link is as good as its
 token, and the pages only show date, time and reference.
 """
 
+from datetime import date
+
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
@@ -55,6 +58,26 @@ def request_form(request):
 
 def request_sent(request):
     return render(request, "appointments/request_sent.html")
+
+
+def privacy_notice(request):
+    """Privacy notice of the appointment pages (#11).
+
+    Deadlines come from the settings the code uses. The date shown is the
+    version stored with every request, an ISO date; changing a deadline or
+    the text needs a new one.
+    """
+    return render(
+        request,
+        "appointments/privacy_notice.html",
+        {
+            "version": date.fromisoformat(settings.APPOINTMENTS_PRIVACY_NOTICE_VERSION),
+            "retention_days": settings.APPOINTMENTS_RETENTION_DAYS,
+            "verify_hours": int(settings.APPOINTMENTS_VERIFY_EMAIL_WITHIN.total_seconds() // 3600),
+            "proposal_working_days": settings.APPOINTMENTS_PROPOSAL_WORKING_DAYS,
+            "csrf_cookie_days": settings.CSRF_COOKIE_AGE // (24 * 60 * 60),
+        },
+    )
 
 
 _PAGES = {

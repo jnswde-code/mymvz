@@ -77,10 +77,17 @@ wissen muss.
   Mailfilter öffnen Links zum Prüfen und dürfen dabei nichts absagen.
 - Unbekannter Link 404, bekannter, aber verbrauchter oder abgelaufener 410.
 - Die Seiten haben ein eigenes schlichtes Layout mit Notfallhinweis und
-  Links auf Impressum und Datenschutz der bestehenden Homepage; die
-  Homepage wird vorerst nicht neu gebaut (#3). Referrer nur `same-origin`,
-  weil die URL den Token enthält; `no-referrer` ließe Browser bei Formularen
-  `Origin: null` senden, und die CSRF-Prüfung schlüge fehl.
+  Links auf das Impressum der bestehenden Homepage und den eigenen
+  Datenschutzhinweis; die Homepage wird vorerst nicht neu gebaut (#3).
+  Referrer nur `same-origin`, weil die URL den Token enthält;
+  `no-referrer` ließe Browser bei Formularen `Origin: null` senden, und die
+  CSRF-Prüfung schlüge fehl.
+- Der Datenschutzhinweis (`/termin/datenschutz/`, #11) beschreibt nur, was
+  der Code tut, und zieht Fristen aus den Einstellungen. Ändert sich, was
+  erhoben, gespeichert oder weitergegeben wird, oder eine Frist, den Text
+  anpassen und `APPOINTMENTS_PRIVACY_NOTICE_VERSION` auf das neue Datum
+  setzen (ISO, die Seite zeigt es als Stand); die Version steht in jeder
+  Anfrage. Gelb markierte Platzhalter hängen an Hosting und Mailanbieter (#10).
 
 ## appointments/mail.py
 
