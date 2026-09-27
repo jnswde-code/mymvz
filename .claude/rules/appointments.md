@@ -31,6 +31,10 @@ wissen muss.
   ohne Anfrage gibt. Der Löschlauf (#9) löscht Termine deshalb über ihr
   eigenes `delete_after`, nicht über die Anfrage.
 - Primärschlüssel UUID für alles mit Personenbezug (#5, Entscheidung 10).
+- `medical_office_entered_at` und `medical_office_removed_at` am Termin:
+  Medical Office bleibt in Stufe 1 der Kalender, angenommene Vorschläge und
+  Absagen per Link geschehen ohne das Team (#8, Entscheidung 2). Kein Zustand
+  und kein Verlaufseintrag, wer abgehakt hat, steht im Zugriffsprotokoll.
 
 ## appointments/services.py
 
@@ -65,6 +69,16 @@ wissen muss.
 - Ein abgelehnter, verfallener oder zurückgezogener Vorschlag setzt die
   Anfrage immer auf `open`, eine Absage eines gebuchten Termins nur mit
   `reopen`.
+- `cancel_appointment` nimmt `expected_status`, den Zustand, den das Team
+  gesehen hat: Hat der Patient den Vorschlag inzwischen angenommen, darf
+  „zurückziehen“ nicht zur Absage eines gebuchten Termins mit Mail werden.
+- Arbeitslisten für Medical Office (`list_appointments`): „einzutragen“ sind
+  gebuchte, noch nicht eingetragene, „auszutragen“ abgesagte, die eingetragen
+  waren. Beide nur, solange der Termin nicht vorbei ist; ein vergangener
+  Termin blockiert nichts mehr (#8).
+- `suggest_patients` zeigt Patienten aus dem Stamm und protokolliert das
+  deshalb als `search` mit Trefferzahl. Zuordnen entscheidet immer ein Mensch
+  (#5 Abschnitt 4).
 
 ## appointments/deadlines.py
 
@@ -115,6 +129,12 @@ wissen muss.
   Namen oder Telefonnummern; die stehen auf der Seite.
 - Den Block „Für Medical Office“ ordnet #19 nach der Eingabemaske; bis dahin
   gilt die Reihenfolge der Anfrage.
+- Schritte an einem Termin tragen Anfrage und Termin in der URL; ein Termin
+  einer anderen Anfrage gibt 404.
+- Zuordnung zum Patienten und Patientensuche auf der Anfrage brauchen
+  zusätzlich `patients.view_patient`, weil sie den Patientenstamm zeigen.
+  Von der Patientenseite führt noch kein Link zu den Anfragen; der kommt nach
+  #39, das dieselbe Vorlage ändert (#8, Entscheidung 7).
 
 ## appointments/mail.py
 

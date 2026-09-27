@@ -4,6 +4,7 @@
 
 {% block content %}
   <h1>Terminanfragen</h1>
+  <p><a href="{% url 'appointments_staff:appointments' %}">Termine und Medical Office</a></p>
   <p>
     Zeige:
     {% for value, label in choices %}

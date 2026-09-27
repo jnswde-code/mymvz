@@ -41,6 +41,8 @@ from appointments.models import (
     TokenPurpose,
 )
 from audit.log import log_access
+from patients import services as patient_services
+from patients.models import Patient
 from practice.models import OpeningHours, Resource
 
 ActorKind = AppointmentEvent.ActorKind
@@ -554,19 +556,28 @@ def cancel_appointment(
     cancelled_by=Appointment.CancelledBy.PRACTICE,
     channel=Appointment.CancellationChannel.BACKOFFICE,
     reopen=False,
+    expected_status=None,
 ) -> Appointment:
     """The team cancels: for the practice, or for a patient who called (#5 section 3).
 
     `reopen` puts the request back to open to offer another date right away.
     Withdrawing a proposal always reopens it. The patient gets an e-mail
     when the practice cancels a booked appointment.
+
+    `expected_status` is the status the team saw on the page: if the patient
+    accepted a proposal meanwhile, "withdraw the proposal" must not become
+    the cancellation of a booked appointment with a mail (#8).
     """
     _require_staff(actor)
     if cancelled_by == Appointment.CancelledBy.SYSTEM:
         raise ValueError("Absagen durch das System laufen über expire_overdue_proposals.")
+    if reason and reason not in Reason.values:
+        raise ValidationError({"reason": "Unbekannter Grund."})
     appointment = _lock_appointment(appointment)
     request = _lock(appointment.request)
     from_status = appointment.status
+    if expected_status is not None:
+        _require(from_status, expected_status)
     if from_status == AStatus.PROPOSED and not reason:
         reason = Reason.PROPOSAL_WITHDRAWN
     _cancel(
@@ -579,9 +590,50 @@ def cancel_appointment(
         reason=reason,
         reopen=reopen,
     )
-    log_access(actor, "update", request)
+    log_access(actor, "update", request, patient_id=request.patient_id)
     if cancelled_by == Appointment.CancelledBy.PRACTICE and from_status == AStatus.BOOKED:
         mail.queue(mail.CANCELLED_BY_PRACTICE, request, appointment)
+    return appointment
+
+
+# --- Medical Office (#8, decision 2) -----------------------------------------
+
+
+@transaction.atomic
+def mark_entered_in_medical_office(appointment, *, actor) -> Appointment:
+    """The team has entered a booked appointment in Medical Office.
+
+    Only once, and only while it is booked: a cancelled one no longer
+    needs entering. No status change, no event; the access log keeps who.
+    """
+    _require_staff(actor)
+    appointment = _lock_appointment(appointment)
+    _require(appointment.status, AStatus.BOOKED)
+    if appointment.medical_office_entered_at is not None:
+        raise TransitionNotAllowed("Schon in Medical Office eingetragen.")
+    appointment.medical_office_entered_at = timezone.now()
+    appointment.save(update_fields=["medical_office_entered_at", "updated_at"])
+    log_access(actor, "update", appointment, patient_id=appointment.patient_id)
+    return appointment
+
+
+@transaction.atomic
+def mark_removed_from_medical_office(appointment, *, actor) -> Appointment:
+    """The team has removed a cancelled appointment from Medical Office.
+
+    Only for appointments that were entered there; the others never blocked
+    a slot.
+    """
+    _require_staff(actor)
+    appointment = _lock_appointment(appointment)
+    _require(appointment.status, AStatus.CANCELLED)
+    if appointment.medical_office_entered_at is None:
+        raise TransitionNotAllowed("Nie in Medical Office eingetragen.")
+    if appointment.medical_office_removed_at is not None:
+        raise TransitionNotAllowed("Schon aus Medical Office ausgetragen.")
+    appointment.medical_office_removed_at = timezone.now()
+    appointment.save(update_fields=["medical_office_removed_at", "updated_at"])
+    log_access(actor, "update", appointment, patient_id=appointment.patient_id)
     return appointment
 
 
@@ -632,6 +684,55 @@ def get_request(pk, actor) -> AppointmentRequest:
     request = staff_visible().select_related("appointment_type", "preferred_resource").get(pk=pk)
     log_access(actor, "view", request, patient_id=request.patient_id)
     return request
+
+
+def list_appointments(
+    actor, *, to_enter=False, to_remove=False, cancelled_by_patient_since=None, now=None
+) -> list:
+    """Appointments for the team's work lists; one `list` entry in the access log.
+
+    At most one filter. None: upcoming proposed and booked appointments.
+    `to_enter`: booked, not yet in Medical Office, including proposals the
+    patient accepted by link. `to_remove`: cancelled after being entered and
+    not yet removed, including cancellations by link. Both only while the
+    appointment is not over; a past slot blocks nothing. The two lists come
+    first, soonest first. `cancelled_by_patient_since`: every cancellation by
+    a patient (link or phone) from then on, newest first.
+
+    Stage 1 has only appointments with a request; name and date of birth
+    come from its snapshot.
+    """
+    _require_staff(actor)
+    if sum([to_enter, to_remove, cancelled_by_patient_since is not None]) > 1:
+        raise ValueError("Höchstens ein Filter.")
+    now = now or timezone.now()
+    appointments = Appointment.objects.filter(request__isnull=False).select_related(
+        "request", "appointment_type"
+    )
+    if to_enter:
+        appointments = appointments.filter(
+            status=AStatus.BOOKED, medical_office_entered_at__isnull=True, end__gt=now
+        ).order_by("start")
+    elif to_remove:
+        appointments = appointments.filter(
+            status=AStatus.CANCELLED,
+            medical_office_entered_at__isnull=False,
+            medical_office_removed_at__isnull=True,
+            end__gt=now,
+        ).order_by("start")
+    elif cancelled_by_patient_since is not None:
+        appointments = appointments.filter(
+            status=AStatus.CANCELLED,
+            cancelled_by=Appointment.CancelledBy.PATIENT,
+            cancelled_at__gte=cancelled_by_patient_since,
+        ).order_by("-cancelled_at")
+    else:
+        appointments = appointments.filter(status__in=Appointment.ACTIVE, end__gt=now).order_by(
+            "start"
+        )
+    appointments = list(appointments.prefetch_related("resources"))
+    log_access(actor, "list", Appointment, result_count=len(appointments))
+    return appointments
 
 
 def visible_since(request):
@@ -736,6 +837,23 @@ def assign_patient(request, patient, *, actor) -> AppointmentRequest:
     patient_id = patient.pk if patient is not None else previous
     log_access(actor, "update", request, patient_id=patient_id)
     return request
+
+
+def suggest_patients(request, *, actor) -> list:
+    """Patients who may be the one in the request, as a hint for `assign_patient`.
+
+    Same date of birth and a similar name (`patients.services.find_duplicates`).
+    Showing them is a search in the patient records, so it is logged as one,
+    with the number of hits only.
+    """
+    _require_staff(actor)
+    hits = patient_services.find_duplicates(
+        given_name=request.patient_first_name,
+        family_name=request.patient_last_name,
+        date_of_birth=request.patient_date_of_birth,
+    )
+    log_access(actor, "search", Patient, result_count=len(hits))
+    return hits
 
 
 def active_types():

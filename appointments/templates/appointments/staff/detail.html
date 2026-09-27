@@ -41,12 +41,95 @@
     {% for window in time_windows %}<li>{{ window.date|date:"l, d.m.Y" }}, {{ window.get_part_of_day_display }}</li>{% endfor %}
   </ol>
 
-  {% if active_appointment %}
-    <h2>Termin</h2>
-    <p>
-      {{ active_appointment.start|date:"l, d.m.Y H:i" }}–{{ active_appointment.end|date:"H:i" }} Uhr,
-      {{ active_appointment.get_status_display }}{% if active_appointment.proposal_expires_at %}, Antwort bis {{ active_appointment.proposal_expires_at|date:"d.m.Y H:i" }} Uhr{% endif %}
-    </p>
+  {% if appointments %}
+    <h2>Termine</h2>
+    <table>
+      <thead><tr><th>Termin</th><th>Ärztin/Arzt</th><th>Stand</th><th>Medical Office</th></tr></thead>
+      <tbody>
+        {% for appointment in appointments %}
+          <tr>
+            <td>{{ appointment.start|date:"l, d.m.Y H:i" }}–{{ appointment.end|date:"H:i" }} Uhr</td>
+            <td>{% for resource in appointment.resources.all %}{{ resource.name }}{% if not forloop.last %}, {% endif %}{% empty %}keine Angabe{% endfor %}</td>
+            <td>
+              {{ appointment.get_status_display }}{% if appointment.proposal_expires_at %}, Antwort bis {{ appointment.proposal_expires_at|date:"d.m.Y H:i" }} Uhr{% endif %}
+              {% if appointment.status == "cancelled" %}({{ appointment.cancelled_at|date:"d.m.Y H:i" }}, {{ appointment.get_cancelled_by_display }}{% if appointment.cancellation_channel %} über {{ appointment.get_cancellation_channel_display }}{% endif %}{% if appointment.cancellation_reason %}: {{ appointment.get_cancellation_reason_display }}{% endif %}){% endif %}
+            </td>
+            <td>
+              {% if appointment.medical_office_removed_at %}ausgetragen {{ appointment.medical_office_removed_at|date:"d.m.Y H:i" }}
+              {% elif appointment.medical_office_entered_at %}eingetragen {{ appointment.medical_office_entered_at|date:"d.m.Y H:i" }}
+              {% else %}–{% endif %}
+              {% if perms.appointments.change_appointmentrequest %}
+                {% if appointment.status == "booked" and not appointment.medical_office_entered_at %}
+                  <form method="post" action="{% url 'appointments_staff:entered' req.pk appointment.pk %}">{% csrf_token %}<button type="submit">In Medical Office eingetragen</button></form>
+                {% elif appointment.status == "cancelled" and appointment.medical_office_entered_at and not appointment.medical_office_removed_at %}
+                  <form method="post" action="{% url 'appointments_staff:removed' req.pk appointment.pk %}">{% csrf_token %}<button type="submit">Aus Medical Office ausgetragen</button></form>
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if active_appointment and perms.appointments.change_appointmentrequest %}
+      {% if active_appointment.status == "proposed" %}
+        <form method="post" action="{% url 'appointments_staff:withdraw' req.pk active_appointment.pk %}">
+          {% csrf_token %}
+          <button type="submit">Vorschlag zurückziehen (Anfrage wieder offen)</button>
+        </form>
+      {% elif active_appointment.status == "booked" %}
+        <h3>Termin absagen (Praxis)</h3>
+        <form method="post" action="{% url 'appointments_staff:cancel' req.pk active_appointment.pk %}">
+          {% csrf_token %}
+          {{ practice_cancel_form.as_p }}
+          <button type="submit">Termin absagen</button>
+          {% if req.email %}<span>Die Patientin/der Patient bekommt eine E-Mail.</span>{% else %}<span>Keine E-Mail-Adresse: bitte anrufen.</span>{% endif %}
+        </form>
+        <h3>Absage am Telefon eintragen</h3>
+        <form method="post" action="{% url 'appointments_staff:phone_cancel' req.pk active_appointment.pk %}">
+          {% csrf_token %}
+          {{ phone_cancel_form.as_p }}
+          <button type="submit">Absage eintragen</button>
+          <span>Es geht keine E-Mail hinaus.</span>
+        </form>
+      {% endif %}
+    {% endif %}
+  {% endif %}
+
+  {% if perms.patients.view_patient %}
+    <h2>Patient</h2>
+    {% if req.patient %}
+      <p>
+        Zugeordnet: <a href="{% url 'patients:detail' req.patient.pk %}">{{ req.patient.family_name }}, {{ req.patient.given_name }}</a>,
+        geb. {{ req.patient.date_of_birth|date:"d.m.Y" }}
+      </p>
+      {% if perms.appointments.change_appointmentrequest %}
+        <form method="post" action="{% url 'appointments_staff:unassign' req.pk %}">
+          {% csrf_token %}
+          <button type="submit">Zuordnung aufheben</button>
+        </form>
+      {% endif %}
+    {% else %}
+      <p>Keinem Patienten zugeordnet. Bitte Name und Geburtsdatum vergleichen; das System ordnet nie selbst zu.</p>
+      {% if suggestions %}
+        <h3>Mögliche Treffer (gleiches Geburtsdatum, ähnlicher Name)</h3>
+        {% include "appointments/staff/_patient_hits.html" with hits=suggestions %}
+      {% else %}
+        <p>Keine naheliegenden Treffer.</p>
+      {% endif %}
+    {% endif %}
+    <h3>Patienten suchen</h3>
+    <form method="get">
+      {{ patient_search_form.as_p }}
+      <button type="submit">Suchen</button>
+    </form>
+    {% if search_results is not None %}
+      {% if search_results %}
+        {% include "appointments/staff/_patient_hits.html" with hits=search_results %}
+      {% else %}
+        <p>Keine Treffer.</p>
+      {% endif %}
+    {% endif %}
   {% endif %}
 
   {% if perms.appointments.change_appointmentrequest %}

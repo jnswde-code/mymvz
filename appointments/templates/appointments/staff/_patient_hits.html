@@ -1,0 +1,22 @@
+<table>
+  <thead><tr><th>Name</th><th>Geburtsdatum</th><th></th></tr></thead>
+  <tbody>
+    {% for patient in hits %}
+      <tr>
+        <td><a href="{% url 'patients:detail' patient.pk %}">{{ patient.family_name }}, {{ patient.given_name }}</a>{% if patient.birth_name %} (geb. {{ patient.birth_name }}){% endif %}{% if not patient.is_active %} (inaktiv){% endif %}</td>
+        <td>{{ patient.date_of_birth|date:"d.m.Y" }}</td>
+        <td>
+          {% if perms.appointments.change_appointmentrequest %}
+            {% if req.patient_id == patient.pk %}zugeordnet{% else %}
+              <form method="post" action="{% url 'appointments_staff:assign' req.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="patient" value="{{ patient.pk }}">
+                <button type="submit">{% if req.patient_id %}stattdessen {% endif %}diesem Patienten zuordnen</button>
+              </form>
+            {% endif %}
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

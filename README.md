@@ -15,8 +15,12 @@ Korrekturen legen neue Fassungen an, der Verlauf zeigt die Unterschiede,
 und die Datenbank verweigert Überschreiben und Löschen. Offene Terminanfragen
 sieht das Team unter `/anfragen/` (Ärztin/Arzt und MFA): mit Hinweisen wie
 „Telefon“ oder „ohne E-Mail – Rückruf nötig“, bestätigen, anderen Termin
-vorschlagen oder ablehnen, interne Notiz. Übertrag nach Medical Office,
-Absagen und Zuordnung zum Patienten folgen mit #42, der Löschlauf mit #9.
+vorschlagen oder ablehnen, interne Notiz. Unter `/anfragen/termine/` stehen
+die Termine, die noch in Medical Office ein- oder dort auszutragen sind, die
+kommenden und die Absagen der letzten 14 Tage. Auf der Anfrage sagt das Team
+Termine ab (für die Praxis oder nach einem Anruf), zieht Vorschläge zurück und
+ordnet die Anfrage nach einem Namensvergleich einem Patienten zu. Der
+Löschlauf folgt mit #9.
 
 ## Voraussetzungen
 
