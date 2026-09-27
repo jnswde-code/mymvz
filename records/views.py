@@ -1,8 +1,9 @@
-"""The record pages for the team (#37).
+"""The record pages for the team (#37, #38).
 
-Every page first checks the right to the chart (403), then looks the patient
-and the record up only among what `access.visible_to` lets through (404, so
-a hidden record does not reveal that it exists), and logs afterwards:
+Every page first checks the right to the chart (403, also for a patient
+whose care team the user is not on), then looks the record up only among
+what `access.visible_to` lets through (404, so a hidden record does not
+reveal that it exists), and logs afterwards:
 opening the chart is a `list` of chart entries with `patient_id`, a history
 or form a `view` of the current version, each shown error a `view` of its own.
 """
@@ -35,9 +36,16 @@ KINDS = {"kontakte": Encounter, "eintraege": ChartEntry}
 
 
 def _patient(request, pk) -> Patient:
-    if not access.can_view_chart(request.user, None):
+    """The patient, if the user may see this chart.
+
+    No chart role 403, unknown patient 404, not on the care team 403.
+    """
+    if not access.has_chart_role(request.user):
         raise PermissionDenied
-    return get_object_or_404(Patient, pk=pk)
+    patient = get_object_or_404(Patient, pk=pk)
+    if not access.can_view_chart(request.user, patient):
+        raise PermissionDenied
+    return patient
 
 
 def _head(request, patient, model, lineage, *, include_errors=False):
@@ -85,10 +93,13 @@ def chart_view(request, pk):
     by_encounter = defaultdict(list)
     for entry in entries:
         by_encounter[entry.encounter_lineage_id].append(entry)
+    hidden = access.hidden_entries(user, patient)
     for encounter in encounters:
         encounter.entries = by_encounter.pop(encounter.lineage_id, [])
+        encounter.hidden = hidden.pop(encounter.lineage_id, 0)
     # Only possible for errors shown to doctors; never hide an entry silently.
     without_encounter = [entry for group in by_encounter.values() for entry in group]
+    hidden_without_encounter = sum(hidden.values())
 
     log_access(user, "list", ChartEntry, patient_id=patient.pk)
     for record in [*encounters, *entries]:
@@ -101,6 +112,7 @@ def chart_view(request, pk):
             "patient": patient,
             "encounters": encounters,
             "without_encounter": without_encounter,
+            "hidden_without_encounter": hidden_without_encounter,
             "can_write": access.can_write(user, patient),
             "can_view_errors": access.can_view_errors(user),
             "include_errors": include_errors,
@@ -150,7 +162,7 @@ def entry_create_view(request, pk, lineage):
         raise PermissionDenied
     # Without errors, so only an active contact.
     encounter = _head(request, patient, Encounter, lineage)
-    form = ChartEntryForm(request.POST or None)
+    form = ChartEntryForm(request.POST or None, user=request.user)
     if request.method == "POST" and form.is_valid():
         try:
             services.create_entry(encounter, actor=request.user, **form.cleaned_data)

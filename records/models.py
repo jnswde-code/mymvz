@@ -30,8 +30,8 @@ class Status(models.TextChoices):
 
 
 class Sensitivity(models.TextChoices):
-    # Protection levels (#23 section 5.2). K2.1 offers only `normal`; the
-    # others come with K2.2 and K2.3 and are refused until then (`access`).
+    # Protection levels (#23 section 5.2). `restricted` comes with K2.3 and
+    # is refused until then (`access`).
     NORMAL = "normal", "normal"
     ADDICTION = "addiction", "Sucht"
     PSYCHOTHERAPY = "psychotherapy", "Psychotherapie"
@@ -261,8 +261,14 @@ class ChartEntry(VersionedRecord):
     class Meta(VersionedRecord.Meta):
         verbose_name = "Eintrag"
         verbose_name_plural = "Einträge"
+        # What they mean and the checks per record: `records/access.py`.
         permissions = [
             ("view_entered_in_error", "Als Irrtum markierte Kontakte und Einträge sehen"),
+            ("view_all_patients", "Akte aller Patienten sehen, ohne Behandlungsteam"),
+            ("view_addiction", "Einträge der Schutzstufe Sucht sehen"),
+            ("write_normal", "Einträge der Schutzstufe normal schreiben"),
+            ("write_addiction", "Einträge der Schutzstufe Sucht schreiben"),
+            ("write_psychotherapy", "Einträge der Schutzstufe Psychotherapie schreiben"),
         ]
 
     def __str__(self):

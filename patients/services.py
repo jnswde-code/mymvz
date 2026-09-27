@@ -2,7 +2,8 @@
 
 Every change runs in one transaction with its `PatientHistory` rows and its
 access log entry. Views, the backoffice (#8) and later voice control (#16)
-call these functions; nothing else writes `Patient` or `PatientIdentifier`.
+call these functions; nothing else writes `Patient`, `PatientIdentifier`,
+`CareTeamMember` or `ConsentToShare`.
 Role checks stay in the views; these functions only require a logged-in
 account.
 """
@@ -18,7 +19,14 @@ from django.db.models import Prefetch, Q
 from django.utils import timezone
 
 from audit.log import log_access
-from patients.models import CareTeamMember, IdentifierSystem, Patient, PatientHistory
+from patients.models import (
+    CareTeamMember,
+    ConsentArea,
+    ConsentToShare,
+    IdentifierSystem,
+    Patient,
+    PatientHistory,
+)
 from patients.models import PatientIdentifier as Identifier
 
 # Master data staff may set and change; each change goes into the history.
@@ -225,7 +233,11 @@ def add_care_team_member(patient: Patient, user, *, actor) -> CareTeamMember:
         raise ValidationError("Deaktivierte Konten gehören zu keinem Behandlungsteam.")
     # Lock the patient so two parallel adds of the same account wait for each other.
     patient = Patient.objects.select_for_update().get(pk=patient.pk)
-    if CareTeamMember.objects.filter(patient=patient, user=user, valid_until=None).exists():
+    today = timezone.localdate()
+    # Memberships start the day they are added, so any not ended yet overlaps.
+    if CareTeamMember.objects.filter(
+        Q(valid_until__isnull=True) | Q(valid_until__gt=today), patient=patient, user=user
+    ).exists():
         raise ValidationError("Das Konto gehört schon zum Behandlungsteam.")
     member = CareTeamMember.objects.create(patient=patient, user=user)
     log_access(actor, "update", patient, patient_id=patient.pk)
@@ -234,9 +246,10 @@ def add_care_team_member(patient: Patient, user, *, actor) -> CareTeamMember:
 
 @transaction.atomic
 def end_care_team_member(member: CareTeamMember, *, actor, on: date | None = None):
+    """End a membership; `on` is the first day without access (default today)."""
     _require_staff(actor)
     member = CareTeamMember.objects.select_for_update().get(pk=member.pk)
-    if member.valid_until is not None:
+    if not member.is_in_force:
         raise ValidationError("Die Mitgliedschaft ist schon beendet.")
     on = on or timezone.localdate()
     if on < member.valid_from:
@@ -245,6 +258,71 @@ def end_care_team_member(member: CareTeamMember, *, actor, on: date | None = Non
     member.save(update_fields=["valid_until"])
     log_access(actor, "update", member.patient, patient_id=member.patient_id)
     return member
+
+
+# --- Consents ----------------------------------------------------------------
+
+# The one right a named person needs besides the consent; `records/access.py`
+# checks it, and the care team, again on every read.
+CHART_PERMISSION = "records.view_chartentry"
+
+
+@transaction.atomic
+def grant_consent(
+    patient: Patient, user, area: str, *, actor, valid_until: date | None = None
+) -> ConsentToShare:
+    """Record that the patient opens a protected area to a named person (#38), from today.
+
+    Nobody records a consent for themselves, so a single account cannot open
+    a protected area to itself.
+    """
+    _require_staff(actor)
+    if area not in ConsentArea.values:
+        raise ValidationError({"area": "Unbekannter Bereich."})
+    if user.pk == actor.pk:
+        raise ValidationError({"user": "Eine Freigabe für sich selbst ist nicht möglich."})
+    if not user.is_active or not user.has_perm(CHART_PERMISSION):
+        raise ValidationError({"user": "Dieses Konto hat keinen Zugang zur Akte."})
+    today = timezone.localdate()
+    if valid_until is not None and valid_until <= today:
+        raise ValidationError({"valid_until": "Das Ende muss nach heute liegen."})
+    # Lock the patient so two parallel grants of the same area wait for each other.
+    patient = Patient.objects.select_for_update().get(pk=patient.pk)
+    # Every consent starts on the day it is granted, so any that has not
+    # ended yet overlaps the new one.
+    if ConsentToShare.objects.filter(
+        Q(valid_until__isnull=True) | Q(valid_until__gt=today),
+        patient=patient,
+        area=area,
+        user=user,
+    ).exists():
+        raise ValidationError("Für diese Person und diesen Bereich gilt schon eine Freigabe.")
+    consent = ConsentToShare.objects.create(
+        patient=patient,
+        area=area,
+        user=user,
+        valid_from=today,
+        valid_until=valid_until,
+        granted_by=actor,
+    )
+    log_access(actor, "create", consent, patient_id=patient.pk)
+    return consent
+
+
+@transaction.atomic
+def end_consent(consent: ConsentToShare, *, actor) -> ConsentToShare:
+    """End a consent today; from now on it opens nothing. It stays on record."""
+    _require_staff(actor)
+    consent = ConsentToShare.objects.select_for_update().get(pk=consent.pk)
+    today = timezone.localdate()
+    if consent.ended_at is not None or not consent.is_in_force:
+        raise ValidationError("Die Freigabe ist schon beendet.")
+    consent.valid_until = max(today, consent.valid_from)
+    consent.ended_by = actor
+    consent.ended_at = timezone.now()
+    consent.save(update_fields=["valid_until", "ended_by", "ended_at"])
+    log_access(actor, "update", consent, patient_id=consent.patient_id)
+    return consent
 
 
 # --- Duplicates and search ---------------------------------------------------

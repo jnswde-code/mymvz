@@ -15,4 +15,16 @@ urlpatterns = [
         views.end_identifier_view,
         name="end_identifier",
     ),
+    path("patienten/<uuid:pk>/team/", views.add_care_team_view, name="add_care_team"),
+    path(
+        "patienten/<uuid:pk>/team/<uuid:member_pk>/beenden/",
+        views.end_care_team_view,
+        name="end_care_team",
+    ),
+    path("patienten/<uuid:pk>/freigaben/", views.add_consent_view, name="add_consent"),
+    path(
+        "patienten/<uuid:pk>/freigaben/<uuid:consent_pk>/beenden/",
+        views.end_consent_view,
+        name="end_consent",
+    ),
 ]
