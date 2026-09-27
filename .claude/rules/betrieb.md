@@ -27,6 +27,10 @@ paths:
   früh. `db` bekommt nur die `POSTGRES_*`-Variablen, nicht die ganze `.env`.
 - Tests laufen gegen PostgreSQL im Compose, nicht gegen SQLite: Später
   zählen Postgres-Eigenheiten (Zeitzonen, Sperren, Constraints).
+- `worker` läuft aus demselben Image mit `run_worker` (Regeldatei `jobs`,
+  #49), damit Mails auch in der Entwicklung aus dem Worker kommen und in
+  der Konsole erscheinen. Der Healthcheck ruft `worker_health`;
+  `stop_grace_period` lässt einen laufenden Durchgang enden.
 - `livekit` und `voice` stehen im Profil `voice` und starten nur mit
   `--profile voice` (Regeldatei `voice`, #13).
 - `voice` hängt an `web`, weil der Agent die interne API von `telephony`

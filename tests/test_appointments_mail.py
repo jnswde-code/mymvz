@@ -3,10 +3,11 @@
 import pytest
 import time_machine
 from django.core import mail as django_mail
+from django.db import transaction
 
 from accounts.testing import make_user
 from appointments import mail, services
-from appointments.models import AppointmentType, Channel
+from appointments.models import AppointmentType, Channel, OutgoingMail
 from tests.conftest import berlin, token_from
 from tests.factories import DoctorFactory, request_data
 
@@ -114,10 +115,12 @@ def test_links_start_with_the_configured_address(commit, mailoutbox, settings):
     assert "https://termine.example.invalid/termin/link/" in mailoutbox[-1].body
 
 
-def test_no_mail_for_a_rolled_back_transaction(mailoutbox, django_capture_on_commit_callbacks):
-    with django_capture_on_commit_callbacks(execute=False) as callbacks:
+def test_no_mail_for_a_rolled_back_transaction(mailoutbox):
+    with pytest.raises(RuntimeError), transaction.atomic():
         services.submit_request(request_data())
-    assert len(callbacks) == 1
+        raise RuntimeError
+    mail.process_outbox()
+    assert not OutgoingMail.objects.exists()
     assert mailoutbox == []
 
 

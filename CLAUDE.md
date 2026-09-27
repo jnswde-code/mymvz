@@ -69,6 +69,8 @@ Projekt dazukommt:
 - `config/env.py`: Umgebungsvariablen lesen (`env_str`, `env_bool`, `env_list`)
 - `config/urls.py`, `config/views.py`: Platzhalter-Startseite
 - `config/context_processors.py`: Band „Testsystem“ bei `DATA_MODE=synthetic`
+- `config/batch.py`: Läufe über viele Datensätze (`each`, `PartialFailure`),
+  Regeldatei `jobs`
 - `config/wsgi.py`: Einstieg für gunicorn
 - `templates/`: Grundlayout `base.html` und Startseite
 - `manage.py`, `tests/test_env.py`, `tests/test_home.py`
@@ -113,15 +115,24 @@ Projekt dazukommt:
   unter `/patienten/<id>/akte/` mit Verlauf und Unterschieden
 
 **`appointments`**: Terminanfrage für Patienten, Termine, Links, Mails
-- `appointments/models.py`: Anfrage, Wunschzeiträume, Termin, Verlauf, Tokens
+- `appointments/models.py`: Anfrage, Wunschzeiträume, Termin, Verlauf, Tokens,
+  Postausgang `OutgoingMail`
 - `appointments/services.py`: alle Zustandsübergänge und Löschfristen
 - `appointments/deadlines.py`: Fristen in Europe/Berlin
-- `appointments/tokens.py`, `appointments/mail.py`: Links und Mails
+- `appointments/tokens.py`, `appointments/mail.py`: Links und Mails, Versand
+  aus dem Postausgang
 - `appointments/captcha.py`, `appointments/spam.py`: Schutz vor Spam
 - `appointments/views.py`, `appointments/forms.py`: Formular und Link-Seiten
 - `appointments/staff_views.py`, `staff_forms.py`, `staff_urls.py`: Anfragen
   fürs Team unter `/anfragen/`
 - `tests/test_appointments_*.py`, `tests/factories.py`, `tests/conftest.py`
+
+**`jobs`**: Worker, Läufe des Systems (#9)
+- `jobs/management/commands/run_worker.py`: Dauerprozess im Dienst `worker`;
+  `worker_health.py`: Healthcheck
+- `jobs/runner.py`: Aufgaben, Takte, `JobRun`; `jobs/alerts.py`: Meldung an
+  `OPERATIONS_ALERT_EMAIL`
+- `jobs/models.py`: `JobRun`
 
 **`telephony`**: Telefonassistent auf Seite der Website (#14)
 - `telephony/api.py`, `telephony/urls.py`: interne API für den Sprachdienst
@@ -132,7 +143,7 @@ Projekt dazukommt:
 
 **`betrieb`**: Container, Compose, CI, Werkzeugkonfiguration
 - `Dockerfile`: Stufen `base`, `dev`, `prod`
-- `docker-compose.yml`: Entwicklung und Tests mit PostgreSQL
+- `docker-compose.yml`: Entwicklung und Tests mit PostgreSQL, Dienst `worker`
 - `.github/workflows/ci.yml`: Linter, Migrationsprüfung und Tests bei Push
   auf `main` und bei jedem PR
 - `pyproject.toml`: pytest und ruff; Abhängigkeiten in `requirements*.txt`
@@ -205,5 +216,6 @@ Systemgrenzen (Mail, SMS, KI-Anbieter, Uhr). Testdaten über Factories
     docker compose up
 
 Die Seite läuft dann unter http://localhost:8000, die Terminanfrage unter
-`/termin/`. `DJANGO_DEBUG=1` in der `.env` ist dafür nötig, sonst lehnt
-Django `localhost` ab. Mails erscheinen in der Konsole.
+`/termin/`. Der Dienst `worker` sendet die Mails und lässt Vorschläge und
+Anfragen verfallen. `DJANGO_DEBUG=1` in der `.env` ist dafür nötig, sonst lehnt
+Django `localhost` ab. Mails erscheinen in der Konsole des Workers.

@@ -1,8 +1,9 @@
 """E-mails around a request (#7).
 
-`queue` records only the kind and the ids; the text and the link tokens are
-made in `send`, when the mail goes out. Today that is right after the commit;
-#9 moves `send` into the worker without changing the callers.
+`queue` records only the kind and the ids in the outbox (`OutgoingMail`), in
+the transaction of the transition; the text and the link tokens are made in
+`send`, when the worker sends the mail (`process_outbox`, #9). A rollback
+leaves no mail behind, and a crash after the commit loses none.
 
 What a mail may contain: date, time, address, reference and links. Never the
 appointment type, the note, the doctor or the patient's name: the address
@@ -10,7 +11,9 @@ may be read by others, and e-mail is not end-to-end encrypted (#3 section 2,
 #5 section 6). Mails to the practice say only that something happened.
 """
 
-from functools import partial
+import logging
+import time
+from datetime import timedelta
 
 from django.conf import settings
 from django.core.mail import EmailMessage
@@ -24,10 +27,12 @@ from appointments.models import (
     Appointment,
     AppointmentEvent,
     AppointmentRequest,
+    OutgoingMail,
     Reason,
     RequestStatus,
     TokenPurpose,
 )
+from config.batch import PartialFailure
 from practice import info
 
 VERIFY_EMAIL = "verify_email"
@@ -39,6 +44,12 @@ CANCELLED_BY_PRACTICE = "cancelled_by_practice"
 EXPIRED = "expired"
 PRACTICE_NEW_REQUEST = "practice_new_request"
 PRACTICE_CANCELLED = "practice_cancelled"
+
+logger = logging.getLogger("appointments.mail")
+
+# Seconds after which a pass takes no further mail; the rest goes in the next
+# pass. So SIGTERM ends the worker within its grace period even with a backlog.
+PASS_TIME_LIMIT = 20
 
 SUBJECTS = {
     VERIFY_EMAIL: "Bitte bestätigen Sie Ihre Terminanfrage",
@@ -55,11 +66,75 @@ TO_PRACTICE = {PRACTICE_NEW_REQUEST, PRACTICE_CANCELLED}
 
 
 def queue(kind: str, request: AppointmentRequest, appointment: Appointment | None = None):
-    """Send after the transaction commits, so no mail goes out for a rollback."""
+    """Put the mail into the outbox; it commits or rolls back with the caller."""
     if kind not in SUBJECTS:
         raise ValueError(f"Unbekannte Mail: {kind!r}")
-    appointment_id = appointment.pk if appointment is not None else None
-    transaction.on_commit(partial(send, kind, request.pk, appointment_id))
+    OutgoingMail.objects.create(
+        kind=kind, request=request, appointment=appointment, next_attempt_at=timezone.now()
+    )
+
+
+def retry_delay(attempts: int) -> timedelta:
+    """Wait after the n-th failed attempt: 1, 5, 15, 60 minutes, then hourly."""
+    steps = settings.APPOINTMENTS_MAIL_RETRY_MINUTES
+    return timedelta(minutes=steps[min(attempts, len(steps)) - 1])
+
+
+def process_outbox(now=None) -> int:
+    """Send the due mails for up to `PASS_TIME_LIMIT` s; the worker calls this each pass (#9).
+
+    Each mail in its own transaction, locked with SKIP LOCKED, so a second
+    worker never picks the same one. A failed mail is tried again after
+    `retry_delay`; after `APPOINTMENTS_MAIL_GIVE_UP_AFTER` it is given up and
+    the run reports it (`PartialFailure`, only the kind). A crash between the
+    SMTP send and the commit sends the mail twice; that is accepted, a lost
+    confirmation weighs more.
+    """
+    now = now or timezone.now()
+    started = time.monotonic()
+    sent = 0
+    given_up = []
+    while time.monotonic() - started < PASS_TIME_LIMIT:
+        with transaction.atomic():
+            row = (
+                OutgoingMail.objects.select_for_update(skip_locked=True)
+                .filter(sent_at__isnull=True, failed_at__isnull=True, next_attempt_at__lte=now)
+                .order_by("next_attempt_at")
+                .first()
+            )
+            if row is None:
+                break
+            try:
+                # Savepoint: the tokens of a mail that did not go out are dropped.
+                with transaction.atomic():
+                    send(row.kind, row.request_id, row.appointment_id)
+            except Exception as exc:  # every error is retried
+                row.attempts += 1
+                row.last_error = type(exc).__name__[:100]
+                give_up_at = row.created_at + settings.APPOINTMENTS_MAIL_GIVE_UP_AFTER
+                if now >= give_up_at:
+                    row.failed_at = now
+                    given_up.append(row.kind)
+                else:
+                    # The last attempt is exactly at the limit.
+                    row.next_attempt_at = min(now + retry_delay(row.attempts), give_up_at)
+                # Kind and exception class only, never the recipient.
+                logger.warning(
+                    "Mail %s nicht versandt (Versuch %d): %s",
+                    row.kind,
+                    row.attempts,
+                    row.last_error,
+                )
+            else:
+                # Also when there was nobody to send it to (`send` returned False).
+                row.attempts += 1
+                row.sent_at = now
+                sent += 1
+            row.save()
+    if given_up:
+        kinds = ", ".join(sorted(set(given_up)))
+        raise PartialFailure(sent, len(given_up), f"Mail nicht zugestellt: {kinds}")
+    return sent
 
 
 def link(raw_token: str) -> str:

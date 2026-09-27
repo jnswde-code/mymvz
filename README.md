@@ -19,8 +19,9 @@ vorschlagen oder ablehnen, interne Notiz. Unter `/anfragen/termine/` stehen
 die Termine, die noch in Medical Office ein- oder dort auszutragen sind, die
 kommenden und die Absagen der letzten 14 Tage. Auf der Anfrage sagt das Team
 Termine ab (für die Praxis oder nach einem Anruf), zieht Vorschläge zurück und
-ordnet die Anfrage nach einem Namensvergleich einem Patienten zu. Der
-Löschlauf folgt mit #9.
+ordnet die Anfrage nach einem Namensvergleich einem Patienten zu. Ein
+Worker sendet die Mails (bei Fehlern mit Wiederholung) und lässt
+abgelaufene Vorschläge und Anfragen verfallen; der Löschlauf folgt mit #9.
 
 ## Voraussetzungen
 
@@ -33,13 +34,18 @@ läuft im Container.
     docker compose run --rm web python manage.py migrate
     docker compose up
 
-Dann http://localhost:8000/termin/ öffnen. Mails erscheinen in der Konsole
-(`docker compose up` zeigt sie). Damit die Links darin auf den eigenen
+Dann http://localhost:8000/termin/ öffnen. `docker compose up` startet
+neben der Website den Worker; er sendet die Mails, und sie erscheinen in
+seiner Konsole (`docker compose up` zeigt sie, Zeilen mit `worker-1`). Damit die Links darin auf den eigenen
 Rechner zeigen, in der `.env` `SITE_BASE_URL=http://localhost:8000` setzen.
 
 **Wer eine `.env` von vor #7 hat**, ergänzt die neuen Variablen aus
 `.env.example` (`DEFAULT_FROM_EMAIL`, `PRACTICE_NOTIFICATION_EMAIL` und die
 `EMAIL_*`-Werte), sonst startet Django nicht.
+
+**Wer eine `.env` von vor #49 hat**, kann `OPERATIONS_ALERT_EMAIL`
+ergänzen: Dorthin meldet der Worker fehlgeschlagene Läufe, ohne Inhalt.
+Ohne den Eintrag gehen die Meldungen an `PRACTICE_NOTIFICATION_EMAIL`.
 
 **Wer eine `.env` von vor #26 hat**, kann `DATA_MODE=synthetic` ergänzen;
 ohne den Eintrag gilt dieselbe Vorgabe.
@@ -134,6 +140,7 @@ Pull Request.
 | `records/` | Akte: Kontakte und Karteikarte in unveränderlichen Fassungen |
 | `appointments/` | Terminanfrage, Termine, Links in Mails, Spam-Schutz |
 | `telephony/` | Telefonassistent: interne API für den Sprachdienst |
+| `jobs/` | Worker: Postausgang, Verfall, Meldung fehlgeschlagener Läufe |
 | `reporting/` | Zählerstände ohne Personenbezug für Auswertungen |
 | `templates/` | gemeinsame Templates |
 | `voice/` | Sprachdienst mit eigenem Image |
