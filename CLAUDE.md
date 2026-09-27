@@ -136,10 +136,17 @@ Projekt dazukommt:
 
 **`telephony`**: Telefonassistent auf Seite der Website (#14)
 - `telephony/api.py`, `telephony/urls.py`: interne API für den Sprachdienst
-  unter `/intern/telefon/` (Auskunft, Terminarten, Wunschtag, Anfrage)
+  unter `/intern/telefon/` (Auskunft, Terminarten, Wunschtag, Anfrage,
+  Rückrufbitte, Ende des Anrufs)
+- `telephony/models.py`: `CallbackRequest` (Rückrufbitte), `CallRecord`
+  (Anruf ohne Nummer und Inhalt)
+- `telephony/services.py`: alle Änderungen, Fristen, Zählen der Anrufe;
+  `telephony/mail.py`: Hinweis an die Praxis
+- `telephony/staff_views.py`: Liste fürs Team unter `/rueckrufe/`
 
 **`reporting`**: Zählerstände ohne Personenbezug
-- `reporting/models.py`: `RequestStatistic`; `tests/test_reporting.py`
+- `reporting/models.py`: `RequestStatistic`, `CallStatistic`;
+  `tests/test_reporting.py`
 
 **`betrieb`**: Container, Compose, CI, Werkzeugkonfiguration
 - `Dockerfile`: Stufen `base`, `dev`, `prod`
@@ -156,6 +163,7 @@ Projekt dazukommt:
 - `voice/mymvz_voice/safety.py`: Wortfilter vor dem LLM;
   `handoff.py`, `texts.py`: Weiterleitung und feste Ansagen
 - `voice/mymvz_voice/providers/`: Anbieterwahl per `.env`, Attrappen in `fake.py`
+- `voice/mymvz_voice/call_report.py`: Meldung des Anrufs am Ende
 - `voice/mymvz_voice/log_privacy.py`, `latency.py`, `config.py`, `join_token.py`
 - `voice/Dockerfile`, `voice/requirements*.txt`, `voice/tests/`
 

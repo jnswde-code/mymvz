@@ -86,11 +86,16 @@ Anforderungen aus dem Konzept in #14, Abschnitte 3, 6 und 7.
 ## Werkzeuge (`tools.py`, `api_client.py`)
 
 - Die Liste ist abschließend (#14, Abschnitt 7): `get_practice_info`,
-  `check_time_window`, `create_phone_request` hier, `hand_off` und
-  `end_call` am Agenten. Es gibt kein Werkzeug, das vorhandene Anfragen,
-  Termine oder Personen liest. Die Terminarten sind ein Thema von
-  `get_practice_info`, kein eigenes Werkzeug. Rückrufbitten kommen mit P2
-  (#45) in dieselbe Datei.
+  `check_time_window`, `create_phone_request`, `create_callback_request`
+  hier, `hand_off` und `end_call` am Agenten. Es gibt kein Werkzeug, das
+  vorhandene Anfragen, Termine, Rückrufbitten oder Personen liest. Die
+  Terminarten sind ein Thema von `get_practice_info`, kein eigenes Werkzeug.
+- Rezept, Überweisung, AU, Befund, Rückruf der Ärztin bzw. des Arztes und
+  Absage/Verschiebung werden Rückrufbitten mit Kategorie, ohne Grund und
+  ohne Freitext (#45); der Assistent führt nichts davon aus. Akutes,
+  Substitution und Hausbesuch bleiben `hand_off`. Wie bei Anfragen legt das
+  Werkzeug nach einem Ausfall im selben Anruf nichts mehr an, höchstens
+  drei je Anruf.
 - Fällt die API aus (nicht konfiguriert, nicht erreichbar, 5 Sekunden ohne
   Antwort, 403/404/5xx), sagt der Agent den festen Satz
   `texts.API_UNAVAILABLE` und beendet die Antwort; das LLM rät nie. Im Log
@@ -111,6 +116,15 @@ Anforderungen aus dem Konzept in #14, Abschnitte 3, 6 und 7.
 - Bodies und Antworten der API kommen nie ins Log, nur der Status.
 - Die Weiche geht jedem Werkzeug vor: Der Wortfilter in `llm_node` läuft,
   bevor das LLM ein Werkzeug wählen kann.
+
+## Anrufprotokoll (`call_report.py`)
+
+- `CallReport` sammelt je Anruf Beginn, Ergebnisse und die erste Kennung
+  bzw. Rückrufbitten-ID und meldet sie am Ende über die API
+  (`ctx.add_shutdown_callback`), nie Nummer, Name oder Text (#45). Jede
+  Weiche zählt, aus Wortfilter, Taste 0 oder `hand_off`; welches Ergebnis
+  gewinnt, entscheidet die Web-App (`emergency_hint` immer). Scheitert die
+  Meldung, steht nur der Grund im Log, der Anruf ist ohnehin vorbei.
 
 ## Protokolle (`log_privacy.py`)
 

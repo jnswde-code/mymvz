@@ -35,6 +35,9 @@ Postausgang, #50 Löschlauf, #51 Erinnerung.
   frisch. Die Überwachung von außen gehört zu #10.
 - `clean_up` löscht Läufe und gesendete Mails nach 30 Tagen; sie enthalten
   nur Arten und IDs.
+- Für den Telefonassistenten (#45) laufen aus `telephony.services`: Hinweis
+  auf neue Rückrufbitten jede Minute, Verfall und Löschen der Rückrufbitten
+  und Zählen der Anrufe stündlich (Regeldatei `telephony`).
 
 ## jobs/alerts.py
 

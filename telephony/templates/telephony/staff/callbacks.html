@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Rückrufe – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  <h1>Rückrufbitten</h1>
+  <p>
+    Vom Telefonassistenten aufgenommen, älteste oben. Nach dem Rückruf abhaken.
+    Unerledigte verfallen nach {{ expires_after_days }} Tagen und stehen dann noch eine Woche hier.
+  </p>
+  {% if callbacks %}
+    <table>
+      <thead>
+        <tr><th>Eingang</th><th>Anliegen</th><th>Name</th><th>Rückrufnummer</th><th>Kennung</th><th>Stand</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for callback in callbacks %}
+          <tr>
+            <td>{{ callback.created_at|date:"d.m.Y H:i" }}</td>
+            <td>{{ callback.get_category_display }}</td>
+            <td>{{ callback.name }}</td>
+            <td><a href="tel:{{ callback.phone }}">{{ callback.phone }}</a></td>
+            <td>{{ callback.reference }}</td>
+            <td>{% if callback.status == "expired" %}<strong>verfallen, nicht zurückgerufen</strong>{% else %}offen{% endif %}</td>
+            <td>
+              {% if perms.telephony.change_callbackrequest %}
+                <form method="post" action="{% url 'telephony:callback_done' callback.pk %}">
+                  {% csrf_token %}<button type="submit">Erledigt</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>Keine Rückrufbitten.</p>
+  {% endif %}
+{% endblock %}

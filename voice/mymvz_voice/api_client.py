@@ -1,8 +1,8 @@
 """Client for the internal API of the web app (#14 section 7).
 
 The agent has no database credentials; everything it reads or writes goes
-through these four calls. Bodies and answers are never logged: a request
-holds name, date of birth and phone number.
+through these calls. Bodies and answers are never logged: a request or a
+callback holds name and phone number.
 """
 
 from __future__ import annotations
@@ -80,3 +80,9 @@ class ApiClient:
         return await self._field(
             "POST", "anfragen/", "reference", data, timeout=CREATE_TIMEOUT_SECONDS
         )
+
+    async def create_callback(self, data: dict[str, Any]) -> str:
+        return await self._field("POST", "rueckrufe/", "id", data)
+
+    async def record_call(self, data: dict[str, Any]) -> None:
+        await self._call("POST", "anrufe/", data)

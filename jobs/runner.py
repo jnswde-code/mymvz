@@ -19,6 +19,7 @@ from appointments.models import OutgoingMail
 from config.batch import PartialFailure
 from jobs import alerts
 from jobs.models import JobRun
+from telephony import services as telephony
 
 logger = logging.getLogger("jobs")
 
@@ -65,6 +66,31 @@ JOBS = [
         services.expire_overdue_requests,
     ),
     Job("clean_up", "Alte Läufe und Mails löschen", timedelta(days=1), clean_up),
+    # Callbacks and calls of the phone assistant (#45).
+    Job(
+        "notify_callbacks",
+        "Praxis über neue Rückrufbitten informieren",
+        timedelta(minutes=1),
+        telephony.notify_new_callbacks,
+    ),
+    Job(
+        "expire_callbacks",
+        "Rückrufbitten verfallen lassen",
+        timedelta(hours=1),
+        telephony.expire_overdue_callbacks,
+    ),
+    Job(
+        "delete_callbacks",
+        "Erledigte Rückrufbitten löschen",
+        timedelta(hours=1),
+        telephony.delete_closed_callbacks,
+    ),
+    Job(
+        "count_calls",
+        "Anrufe zählen und löschen",
+        timedelta(hours=1),
+        telephony.count_and_delete_call_records,
+    ),
 ]
 
 

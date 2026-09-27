@@ -1,19 +1,21 @@
 """Internal API for the voice agent (#14 section 7), JSON over HTTP.
 
-The agent has no database credentials. It gets exactly four things here:
+The agent has no database credentials. It gets exactly six things here:
 the practice's fixed information, the appointment types patients may
-request, the check of one preferred day and the creation of a request.
-No endpoint reads existing requests, appointments or patients, and the
-answer to a new request is only its reference: what the assistant cannot
-read, a caller cannot talk it into revealing.
+request, the check of one preferred day, the creation of a request, the
+creation of a callback and the record of a finished call (#45). No endpoint
+reads existing requests, appointments, callbacks or patients, and the
+answer to something new is only its reference or id: what the assistant
+cannot read, a caller cannot talk it into revealing.
 
-Every rule stays in `appointments/services.py`; this module only turns JSON
-into the arguments of `validate_time_window` and `submit_request`.
+Every rule stays in `appointments/services.py` and `telephony/services.py`;
+this module only turns JSON into the arguments of their functions.
 """
 
 import hmac
 import json
-from datetime import date
+import uuid
+from datetime import date, datetime
 from functools import wraps
 
 from django.conf import settings
@@ -29,6 +31,7 @@ from appointments.forms import phone_validator
 from appointments.models import AppointmentType, Channel, Insurance, PartOfDay
 from practice import info
 from practice.models import OpeningHours
+from telephony import services as telephony_services
 
 WEEKDAYS = ("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
 
@@ -53,6 +56,13 @@ REQUEST_FIELDS = {
 }
 REQUIRED_FIELDS = REQUEST_FIELDS - {"contact_name", "contact_relationship", "email"}
 EMAIL_MAX_LENGTH = 254
+
+# A callback: these fields and no others, no free text either (#45).
+CALLBACK_FIELDS = {"name": 200, "phone": 40, "category": 20, "reference": 10}
+CALLBACK_REQUIRED = {"name", "phone", "category"}
+# The end of a call: when, how long, what happened; never a number or words.
+CALL_FIELDS = {"started_at", "duration_seconds", "outcomes", "request_reference", "callback_id"}
+CALL_REQUIRED = {"started_at", "duration_seconds", "outcomes"}
 
 
 def internal(view):
@@ -97,6 +107,24 @@ def _date(value, field: str) -> date:
         return date.fromisoformat(value)
     except (TypeError, ValueError):
         raise ValidationError({field: "Bitte ein Datum im Format JJJJ-MM-TT."}) from None
+
+
+def _known_fields(data: dict, allowed: set, required: set) -> None:
+    """Unknown fields are an error, not silently dropped: `note` must fail loudly."""
+    errors = {}
+    for field in sorted(data.keys() - allowed):
+        errors[field] = "Dieses Feld gibt es am Telefon nicht."
+    for field in sorted(required - data.keys()):
+        errors[field] = "Fehlt."
+    if errors:
+        raise ValidationError(errors)
+
+
+def _text(value, field: str, max_length: int) -> str:
+    # NUL: PostgreSQL refuses it, and the answer would be 500, not 400.
+    if not isinstance(value, str) or len(value.strip()) > max_length or "\x00" in value:
+        raise ValidationError({field: f"Text mit höchstens {max_length} Zeichen."})
+    return value.strip()
 
 
 def _part_of_day(value, field: str) -> str:
@@ -188,22 +216,14 @@ def check_time_window(request):
 
 def _request_data(data: dict) -> dict:
     """JSON of the agent → `data` for `services.submit_request`; formats only."""
+    _known_fields(data, REQUEST_FIELDS, REQUIRED_FIELDS)
     errors = {}
-    for field in sorted(data.keys() - REQUEST_FIELDS):
-        errors[field] = "Dieses Feld gibt es am Telefon nicht."
-    for field in sorted(REQUIRED_FIELDS - data.keys()):
-        errors[field] = "Fehlt."
-    if errors:
-        raise ValidationError(errors)
-
     result = {}
     for field, max_length in TEXT_FIELDS.items():
-        value = data.get(field, "")
-        # NUL: PostgreSQL refuses it, and the answer would be 500, not 400.
-        if not isinstance(value, str) or len(value.strip()) > max_length or "\x00" in value:
-            errors[field] = f"Text mit höchstens {max_length} Zeichen."
-        else:
-            result[field] = value.strip()
+        try:
+            result[field] = _text(data.get(field, ""), field, max_length)
+        except ValidationError as error:
+            errors.update(error.message_dict)
     for field in ("patient_first_name", "patient_last_name", "privacy_notice_version"):
         if field not in errors and not result[field]:
             errors[field] = "Fehlt."
@@ -286,3 +306,73 @@ def create_request(request):
     except ValidationError as error:
         return _errors(error)
     return JsonResponse({"reference": created.reference}, status=201)
+
+
+@internal
+@require_POST
+def create_callback(request):
+    """A new callback (#45); the answer is only its id, for the call record."""
+    try:
+        data = _body(request)
+        _known_fields(data, CALLBACK_FIELDS.keys(), CALLBACK_REQUIRED)
+        errors, fields = {}, {}
+        for field, max_length in CALLBACK_FIELDS.items():
+            try:
+                fields[field] = _text(data.get(field, ""), field, max_length)
+            except ValidationError as error:
+                errors.update(error.message_dict)
+        if errors:
+            raise ValidationError(errors)
+        created = telephony_services.create_callback(**fields)
+    except ValidationError as error:
+        return _errors(error)
+    return JsonResponse({"id": str(created.pk)}, status=201)
+
+
+def _call_data(data: dict) -> dict:
+    """JSON of the agent → arguments of `record_call`; formats only."""
+    _known_fields(data, CALL_FIELDS, CALL_REQUIRED)
+    errors, result = {}, {}
+    try:
+        started_at = datetime.fromisoformat(data["started_at"])
+        if started_at.tzinfo is None:
+            raise ValueError
+        result["started_at"] = started_at
+    except (TypeError, ValueError):
+        errors["started_at"] = "Bitte Datum und Uhrzeit nach ISO 8601 mit Zeitzone."
+    duration = data["duration_seconds"]
+    if isinstance(duration, int) and not isinstance(duration, bool):
+        result["duration_seconds"] = duration
+    else:
+        errors["duration_seconds"] = "Bitte eine ganze Zahl."
+    outcomes = data["outcomes"]
+    if isinstance(outcomes, list) and all(isinstance(o, str) for o in outcomes):
+        result["outcomes"] = outcomes
+    else:
+        errors["outcomes"] = "Bitte eine Liste von Ergebnissen."
+    try:
+        result["request_reference"] = _text(
+            data.get("request_reference", ""), "request_reference", 10
+        )
+    except ValidationError as error:
+        errors.update(error.message_dict)
+    callback_id = data.get("callback_id")
+    if callback_id is not None:
+        try:
+            result["callback_id"] = uuid.UUID(callback_id)
+        except (TypeError, ValueError, AttributeError):
+            errors["callback_id"] = "Bitte eine UUID."
+    if errors:
+        raise ValidationError(errors)
+    return result
+
+
+@internal
+@require_POST
+def record_call(request):
+    """The end of a call (#45): time, duration, outcomes; no number, no content."""
+    try:
+        telephony_services.record_call(**_call_data(_body(request)))
+    except ValidationError as error:
+        return _errors(error)
+    return JsonResponse({}, status=201)

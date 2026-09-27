@@ -16,6 +16,7 @@
       Angemeldet als {{ user.get_username }} ·
       <a href="{% url 'accounts:account' %}">Konto</a>
       {% if perms.appointments.view_appointmentrequest %}· <a href="{% url 'appointments_staff:list' %}">Anfragen</a>{% endif %}
+      {% if perms.telephony.view_callbackrequest %}· <a href="{% url 'telephony:callbacks' %}">Rückrufe</a>{% endif %}
       {% if perms.patients.view_patient %}· <a href="{% url 'patients:search' %}">Patienten</a>{% endif %}
       {% if perms.audit.view_accesslogentry %}· <a href="{% url 'audit:log' %}">Zugriffsprotokoll</a>{% endif %}
       <form method="post" action="{% url 'accounts:logout' %}" style="display:inline">
