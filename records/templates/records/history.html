@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Verlauf – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  {% include "records/_header.html" %}
+
+  <h2>Verlauf {% if kind == "kontakte" %}des Kontakts{% else %}des Eintrags{% endif %}</h2>
+  {% if encounter %}
+    <p>Kontakt: {% with record=encounter %}{% include "records/_record.html" %}{% endwith %}</p>
+  {% endif %}
+  {% if can_change %}
+    <p>
+      <a href="{% url 'records:revise' patient.pk kind head.lineage_id %}">korrigieren</a>
+      · <a href="{% url 'records:error' patient.pk kind head.lineage_id %}">als Irrtum markieren</a>
+    </p>
+  {% endif %}
+
+  {% for version in versions %}
+    <article>
+      <h3>
+        Fassung {{ version.version }} · {{ version.get_status_display }}
+        <small>
+          gespeichert {{ version.recorded_at|date:"d.m.Y H:i" }} von {{ version.recorded_by.get_username }}
+          {% if version.change_reason %}· Grund: {{ version.get_change_reason_display }}{% if version.change_reason_text %} – {{ version.change_reason_text }}{% endif %}{% endif %}
+        </small>
+      </h3>
+      {% with record=version %}{% include "records/_record.html" %}{% endwith %}
+      {% if version.changes %}
+        <ul>
+          {% for label, old, new in version.changes %}
+            <li>{{ label }}: <del>{{ old }}</del> → <ins>{{ new }}</ins></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      {% if version.diff %}
+        <p>Änderungen am Text gegenüber Fassung {{ version.version|add:"-1" }}:</p>
+        <div style="white-space:pre-wrap">{% for kind, text in version.diff %}{% if kind == "removed" %}<del style="background:#fdd">{{ text }}</del>{% elif kind == "added" %}<ins style="background:#dfd">{{ text }}</ins>{% else %}{{ text }}{% endif %}{% endfor %}</div>
+      {% endif %}
+    </article>
+  {% endfor %}
+
+  <p><a href="{{ back }}">Zurück zur Akte</a></p>
+{% endblock %}

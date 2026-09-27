@@ -69,7 +69,9 @@ paths:
 - Rechte heute: Die Verwaltung liest das Zugriffsprotokoll. Stammdaten
   lesen, anlegen und ändern Ärztinnen/Ärzte, MFA und Verwaltung; die übrigen
   Berufe lesen sie nur (#23 Abschnitt 5.1, #26, Migration `0003`). Die
-  Prüfung je Datensatz und Schutzstufen kommen mit K2 (#23), nicht hier.
+  Karteikarte lesen und schreiben bis K2.2 nur Ärztinnen/Ärzte und MFA
+  (#37, Migration `0004`); was die Rechte bedeuten und die Prüfung je
+  Datensatz stehen in `records/access.py`, nicht hier.
 
 ## accounts/management/commands/
 

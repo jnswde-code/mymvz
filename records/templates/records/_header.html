@@ -1,0 +1,10 @@
+<header>
+  <h1>Akte: {% if patient.title %}{{ patient.title }} {% endif %}{{ patient.given_name }} {{ patient.family_name }}</h1>
+  <p>
+    geb. {{ patient.date_of_birth|date:"d.m.Y" }} · {{ patient.get_sex_display }}
+    {% for identifier in patient.current_identifiers %} · {{ identifier.get_system_display }} {{ identifier.value }}{% endfor %}
+    {% if patient.deceased_on %} · <strong>verstorben am {{ patient.deceased_on|date:"d.m.Y" }}</strong>{% endif %}
+    {% if not patient.is_active %} · <strong>inaktiv</strong>{% endif %}
+  </p>
+  <p><a href="{% url 'patients:detail' patient.pk %}">Stammdaten</a> · <a href="{% url 'records:chart' patient.pk %}">Akte</a></p>
+</header>

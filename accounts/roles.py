@@ -23,16 +23,19 @@ ROLES = {
     "nutrition": NUTRITION,
 }
 
-# Permissions per group, as "app_label.codename". Only what exists today;
-# record-level checks come with K2 (#23). Master data: doctors, MFA and the
-# administration read and change it, the other professions only read it
-# (#23 section 5.1, #26).
+# Permissions per group, as "app_label.codename". Only what exists today.
+# Master data: doctors, MFA and the administration read and change it, the
+# other professions only read it (#23 section 5.1, #26). The chart: doctors
+# and MFA only until K2.2 (#37); what the permissions mean and the checks per
+# record are in `records/access.py`.
 _MASTER_DATA_EDIT = ["patients.view_patient", "patients.add_patient", "patients.change_patient"]
 _MASTER_DATA_READ = ["patients.view_patient"]
+_CHART_MFA = ["records.view_chartentry", "records.add_chartentry"]
+_CHART_DOCTOR = [*_CHART_MFA, "records.change_chartentry", "records.view_entered_in_error"]
 
 ROLE_PERMISSIONS = {
-    DOCTOR: _MASTER_DATA_EDIT,
-    MFA: _MASTER_DATA_EDIT,
+    DOCTOR: [*_MASTER_DATA_EDIT, *_CHART_DOCTOR],
+    MFA: [*_MASTER_DATA_EDIT, *_CHART_MFA],
     ADMINISTRATION: ["audit.view_accesslogentry", *_MASTER_DATA_EDIT],
     PSYCHOLOGY: _MASTER_DATA_READ,
     ADDICTION_THERAPY: _MASTER_DATA_READ,

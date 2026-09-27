@@ -20,7 +20,7 @@ beim Ändern wissen muss.
   eine alte Nummer nie auf eine zweite Person zeigt. Je Patient und System
   gilt höchstens eine Nummer. Kennungen und Mitglieder des Behandlungsteams
   werden beendet (`valid_until`), nie gelöscht.
-- `CareTeamMember` braucht erst K2: Psychologie, Suchttherapie und Ernährung
+- `CareTeamMember` braucht erst K2.2 (#38): Psychologie, Suchttherapie und Ernährung
   sehen klinische Inhalte nur bei Patienten, in deren Team sie stehen.
 - `retain_until` ist Ende des Jahres des letzten Kontakts plus zehn Jahre
   (§ 630f BGB, #23 Abschnitt 3.3), gesetzt über `services.record_contact`.
@@ -63,3 +63,7 @@ beim Ändern wissen muss.
   Filme und Fiktion freihält,
   Medical-Office-Nummern ab 900000. So entsteht keine realistische
   Kombination aus Name, Geburtsdatum und Anschrift (DSGVO Art. 9, #3).
+- Mit `--author` schreibt es auch Kontakte und Einträge, über
+  `records.services` wie ein Mensch, damit nichts am Fassungsmodell vorbei
+  entsteht. Die Texte sind kurz und erfunden; alle Einträge sind Nachträge,
+  weil sie in der Vergangenheit liegen (#37).

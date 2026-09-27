@@ -1,0 +1,102 @@
+---
+paths:
+  - "records/**"
+---
+# Akte: Kontakte und Karteikarte in Fassungen
+
+Konzept in #23 (Abschnitte 3, 5 und 6), Schnitt und Entscheidungen in #27,
+umgesetzt als K2.1 (#37). K2.2 (#38) bringt Behandlungsteam und
+Schutzstufen, K2.3 (#39) Sperrvermerk und Notfallzugriff.
+
+## Zwei Regeln für alles in `records`
+
+- **Keine auswertenden Funktionen.** Die Akte speichert, zeigt und ordnet;
+  sie bewertet keine medizinischen Inhalte. Allergie gegen Medikation,
+  Wechselwirkungen, Dosisrechner, Warnungen aus Werten, Recall aus Diagnosen
+  oder ICD-Vorschläge machten sie zum Medizinprodukt (MDR Regel 11, #23
+  Abschnitt 2). Kommt so etwas, dann als zugelassenes Fremdprodukt.
+- **Nie am Fassungsmodell vorbei.** Geschrieben wird nur über
+  `records/services.py`, gelesen nur über `records/access.py`. Das gilt auch
+  für Suche, Export und die Sprachsteuerung (#16).
+
+## records/models.py
+
+- Jeder klinische Datensatz erbt von `VersionedRecord` (#23 3.1). Ändern
+  heißt: neue Fassung, alte auf `superseded`. Andere Datensätze verweisen
+  auf die `lineage_id`, nicht auf eine Fassung (`ChartEntry.encounter_lineage_id`),
+  damit ein korrigierter Kontakt seine Einträge behält.
+- Je Linie gibt es genau einen Kopf, die neueste Fassung, `active` oder
+  `entered_in_error` (Teil-Unique-Index `…_one_head`). Das ist strenger als
+  „höchstens eine aktive“ und schließt auch zwei Irrtums-Fassungen aus.
+  `replaces` ist eins zu eins, also hat jede Fassung höchstens einen
+  Nachfolger, auch in der Datenbank.
+- `change_reason` ist ab Fassung 2 Pflicht, bei „Sonstiges“ mit Text
+  (#27, Frage 4); Check-Constraints halten das auch in der Datenbank.
+- `is_late_entry`: die erste Fassung der Linie wurde an einem späteren
+  Kalendertag in Europe/Berlin gespeichert, als es klinisch war (#27,
+  Frage 3). Eine Korrektur macht einen Eintrag nicht zum Nachtrag.
+- `Encounter` ist selbst versioniert (#27, Frage 1). `patient`,
+  `sensitivity`, `source`, `appointment` und `encounter_lineage_id` bleiben
+  über alle Fassungen gleich; ein falscher Patient ist ein Irrtum, keine
+  Korrektur.
+- `ChartEntryType`: Kürzel aus Migration `0003`, vorläufig bis #19. Werden
+  abgeschaltet (`is_active`), nicht gelöscht; Einträge verweisen mit
+  `PROTECT`.
+- `save()` auf eine bestehende Fassung, `delete()`, `QuerySet.update` und
+  `QuerySet.delete` werfen `ImmutableRecordError`. `_supersede()` ist der
+  einzige Weg für den Statuswechsel und nur für `services`.
+
+## records/migrations/0002_immutability_triggers.py
+
+- Ein Trigger je Tabelle verweigert jedes `DELETE` und jedes `UPDATE` außer
+  `active → superseded` bei sonst gleicher Zeile (Vergleich als `jsonb`, so
+  sind Spalten aus K3 bis K5 automatisch geschützt). Neue versionierte
+  Tabellen bekommen denselben Trigger in ihrer Migration.
+- Ausnahme: Spalten, die als Trigger-Argument genannt sind, dürfen auf
+  `NULL` gehen und sonst nichts. Das braucht `SET NULL` von
+  `Encounter.appointment`, wenn ein Termin gelöscht wird.
+- `active → entered_in_error` erlaubt der Trigger bewusst nicht, anders als
+  in #37 skizziert: `mark_entered_in_error` legt eine letzte Fassung mit
+  Status `entered_in_error` und Grund an. So stehen wer, wann und warum wie
+  bei jeder Änderung in einer Fassung, und rohes SQL kann nichts ohne Grund
+  als Irrtum markieren.
+- Der Weg für den Aufbewahrungslauf (Sitzungsvariable, #23 3.3) kommt erst
+  mit K8 (#27, Frage 8). `TRUNCATE` sperrt der Trigger nicht; die Test-DB
+  leert Tabellen damit.
+
+## records/services.py
+
+- Jede Änderung: Kopf mit `select_for_update` sperren, prüfen, dass er die
+  Fassung ist, die der Nutzer gesehen hat (`based_on_version`), alten Kopf
+  ersetzen, Nachfolger speichern, protokollieren. Zwei gleichzeitige
+  Korrekturen ergeben so einen Nachfolger und eine Fehlermeldung.
+- Anders als `patients.services` prüfen die Funktionen die Rechte selbst
+  (über `access`, auf dem gesperrten Kopf), damit kein Aufrufer an ihnen
+  vorbei schreibt.
+- Ein Kontakt lässt sich erst als Irrtum markieren, wenn keine aktiven
+  Einträge mehr an ihm hängen. `create_entry` sperrt den Kontakt ebenfalls,
+  damit dazwischen kein Eintrag hineinrutscht.
+- Neue Kontakte rufen `patients.services.record_contact` (Aufbewahrung);
+  eine Korrektur auf ein späteres Datum schiebt die Frist, eine frühere
+  verkürzt sie nie.
+- Schutzstufen außer `normal` weist `create_entry` ab, bis K2.2 sie regelt.
+
+## records/access.py
+
+- Die eine Prüfung. `can_view` ist `visible_to` auf eine Zeile, beide können
+  nicht auseinanderlaufen. Was hier nicht geregelt ist, bleibt zu.
+- K2.1: Karteikarte nur für Ärztinnen/Ärzte und MFA (Rechte in
+  `accounts/roles.py`). MFA schreibt und korrigiert eigene Einträge,
+  Ärztinnen/Ärzte alle. Als Irrtum markieren dürfen Autor und
+  Ärztinnen/Ärzte (#27, Frage 2).
+- Eine Linie mit Irrtums-Kopf ist mit allen Fassungen ausgeblendet. Nur
+  Ärztinnen/Ärzte sehen sie auf Wunsch (`include_errors`); jede gezeigte
+  Irrtums-Fassung ist ein eigener Protokolleintrag.
+
+## records/views.py
+
+- Reihenfolge: Recht auf die Akte (403), dann Patient und Datensatz nur aus
+  `visible_to` (404, damit Verborgenes nicht auffällt), dann protokollieren.
+  Akte öffnen ist `list` auf `records.chartentry` mit `patient_id`.
+- Der Verlauf zeigt Wortunterschiede (`records/diff.py`, `difflib`) und
+  geänderte Felder je Fassung.

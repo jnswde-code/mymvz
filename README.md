@@ -10,7 +10,9 @@ Zugriffsprotokoll. Die Terminanfrage für Patienten unter `/termin/`: Formular
 mit Spam-Schutz, Bestätigung der E-Mail-Adresse, Links zum Zurückziehen,
 Annehmen eines Vorschlags und Absagen. Ein Patientenstamm fürs Team unter
 `/patienten/` (Suche, Anlegen mit Dublettenhinweis, Kennungen, Verlauf der
-Stammdaten). Die Bearbeitung durch die Praxis
+Stammdaten) und dazu die Akte mit Kontakten und Karteikarteneinträgen:
+Korrekturen legen neue Fassungen an, der Verlauf zeigt die Unterschiede,
+und die Datenbank verweigert Überschreiben und Löschen. Die Bearbeitung durch die Praxis
 (Backoffice) folgt mit #8, der Löschlauf mit #9.
 
 ## Voraussetzungen
@@ -70,6 +72,9 @@ Patientendaten gehören nicht hinein. Erfundene Patienten legt an:
 
     docker compose run --rm web python manage.py seed_demo --count 20
 
+Mit `--author <konto>` bekommen die Patienten auch erfundene Kontakte und
+Einträge in der Akte; das Konto braucht die Rolle Ärztin/Arzt oder MFA.
+
 ## Sprachdienst (Prototyp)
 
 Ein Sprachagent mit [LiveKit Agents](https://docs.livekit.io/agents/)
@@ -111,6 +116,7 @@ Pull Request.
 | `audit/` | Zugriffsprotokoll |
 | `practice/` | Ärztinnen/Ärzte als Ressourcen, Öffnungs- und Sprechzeiten |
 | `patients/` | Patientenstamm: Stammdaten, Kennungen, Verlauf, Behandlungsteam |
+| `records/` | Akte: Kontakte und Karteikarte in unveränderlichen Fassungen |
 | `appointments/` | Terminanfrage, Termine, Links in Mails, Spam-Schutz |
 | `reporting/` | Zählerstände ohne Personenbezug für Auswertungen |
 | `templates/` | gemeinsame Templates |

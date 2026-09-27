@@ -102,6 +102,15 @@ Projekt dazukommt:
   `/patienten/`
 - `patients/management/commands/seed_demo.py`: erfundene Patienten
 
+**`records`**: Akte mit unveränderlichen Fassungen (K2.1 aus #27)
+- `records/models.py`: Basis `VersionedRecord`, `Encounter`, `ChartEntry`,
+  `ChartEntryType`; Trigger in `records/migrations/0002_*`
+- `records/services.py`: alle Schreibwege (anlegen, korrigieren, Irrtum)
+- `records/access.py`: die eine Rechteprüfung (`visible_to`, `can_view`,
+  `can_change`)
+- `records/views.py`, `records/forms.py`, `records/diff.py`: Akte-Ansicht
+  unter `/patienten/<id>/akte/` mit Verlauf und Unterschieden
+
 **`appointments`**: Terminanfrage für Patienten, Termine, Links, Mails
 - `appointments/models.py`: Anfrage, Wunschzeiträume, Termin, Verlauf, Tokens
 - `appointments/services.py`: alle Zustandsübergänge und Löschfristen
