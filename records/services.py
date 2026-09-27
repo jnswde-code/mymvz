@@ -44,9 +44,12 @@ def is_late(occurred_at, first_recorded_at) -> bool:
     return timezone.localdate(first_recorded_at) > timezone.localdate(occurred_at)
 
 
-def _check_occurred_at(occurred_at, now):
+def _clinical_time(occurred_at, now):
+    """The clinical time to the minute, as the form shows and sends it; not in the future."""
+    occurred_at = occurred_at.replace(second=0, microsecond=0)
     if occurred_at > now:
         raise ValidationError({"occurred_at": "Der Zeitpunkt liegt in der Zukunft."})
+    return occurred_at
 
 
 def _check_sensitivity(sensitivity):
@@ -120,8 +123,10 @@ def _successor(head: VersionedRecord, *, actor, now, status, reason, reason_text
 def create_encounter(patient, *, kind, occurred_at, actor, appointment=None) -> Encounter:
     if not access.can_write(actor, patient):
         raise PermissionDenied
+    if appointment is not None and appointment.patient_id != patient.pk:
+        raise ValidationError({"appointment": "Der Termin gehört zu einem anderen Patienten."})
     now = timezone.now()
-    _check_occurred_at(occurred_at, now)
+    occurred_at = _clinical_time(occurred_at, now)
     encounter = Encounter(
         patient=patient,
         kind=kind,
@@ -152,7 +157,7 @@ def revise_encounter(
     _check_reason(change_reason, change_reason_text)
     head = _lock_and_check(actor, encounter, based_on_version)
     now = timezone.now()
-    _check_occurred_at(occurred_at, now)
+    occurred_at = _clinical_time(occurred_at, now)
     if (kind, occurred_at) == (head.kind, head.occurred_at):
         raise ValidationError("Keine Änderung.")
     successor = _successor(
@@ -187,19 +192,20 @@ def create_entry(
     if not access.can_write(actor, encounter.patient) or not access.can_view(actor, encounter):
         raise PermissionDenied
     _check_sensitivity(sensitivity)
-    # Lock the contact, so it cannot be marked as error in between.
-    encounter = (
-        Encounter.objects.select_for_update()
-        .filter(lineage_id=encounter.lineage_id, status=Status.ACTIVE)
-        .first()
+    # Lock the contact, so it cannot be marked as error in between. If it was
+    # corrected meanwhile, the first query finds nothing once the lock is
+    # released; the second one sees the new version.
+    active = Encounter.objects.select_for_update().filter(
+        lineage_id=encounter.lineage_id, status=Status.ACTIVE
     )
+    encounter = active.first() or active.first()
     if encounter is None:
-        raise ValidationError("Diesen Kontakt gibt es nicht mehr.")
+        raise ValidationError("Dieser Kontakt ist als Irrtum markiert.")
     if not entry_type.is_active:
         raise ValidationError({"entry_type": "Dieses Kürzel wird nicht mehr verwendet."})
     now = timezone.now()
     occurred_at = occurred_at or encounter.occurred_at
-    _check_occurred_at(occurred_at, now)
+    occurred_at = _clinical_time(occurred_at, now)
     entry = ChartEntry(
         patient_id=encounter.patient_id,
         encounter_lineage_id=encounter.lineage_id,
@@ -232,7 +238,7 @@ def revise_entry(
     _check_reason(change_reason, change_reason_text)
     head = _lock_and_check(actor, entry, based_on_version)
     now = timezone.now()
-    _check_occurred_at(occurred_at, now)
+    occurred_at = _clinical_time(occurred_at, now)
     if entry_type.pk != head.entry_type_id and not entry_type.is_active:
         raise ValidationError({"entry_type": "Dieses Kürzel wird nicht mehr verwendet."})
     if (entry_type.pk, text, occurred_at) == (head.entry_type_id, head.text, head.occurred_at):

@@ -148,9 +148,8 @@ def entry_create_view(request, pk, lineage):
     patient = _patient(request, pk)
     if not access.can_write(request.user, patient):
         raise PermissionDenied
+    # Without errors, so only an active contact.
     encounter = _head(request, patient, Encounter, lineage)
-    if encounter.status != Status.ACTIVE:
-        raise Http404
     form = ChartEntryForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
@@ -201,7 +200,8 @@ def history_view(request, pk, kind, lineage):
     for version in versions:
         version.changes = _changes(previous, version) if previous else []
         if model is ChartEntry:
-            version.diff = word_diff(previous.text, version.text) if previous else None
+            changed = previous is not None and previous.text != version.text
+            version.diff = word_diff(previous.text, version.text) if changed else None
         previous = version
     encounter = None
     if model is ChartEntry:
@@ -215,6 +215,8 @@ def history_view(request, pk, kind, lineage):
             .first()
         )
     log_access(request.user, "view", head, patient_id=patient.pk)
+    if encounter is not None and encounter.status == Status.ENTERED_IN_ERROR:
+        log_access(request.user, "view", encounter, patient_id=patient.pk)
     return render(
         request,
         "records/history.html",
@@ -244,7 +246,7 @@ def revise_view(request, pk, kind, lineage):
         initial["kind"] = head.kind
     else:
         initial.update(entry_type=head.entry_type_id, text=head.text)
-    form = form_class(request.POST or None, initial=initial)
+    form = form_class(request.POST or None, initial=initial, current=head)
     if request.method == "POST" and form.is_valid():
         revise = services.revise_encounter if model is Encounter else services.revise_entry
         try:

@@ -54,8 +54,10 @@ def visible_to(user, queryset, *, include_errors: bool = False):
         return queryset.none()
     visible = queryset.filter(sensitivity__in=OPEN_SENSITIVITIES)
     if not (include_errors and can_view_errors(user)):
-        in_error = queryset.model.objects.filter(status=Status.ENTERED_IN_ERROR)
-        visible = visible.exclude(lineage_id__in=in_error.values("lineage_id"))
+        in_error = queryset.model.objects.filter(
+            lineage_id=OuterRef("lineage_id"), status=Status.ENTERED_IN_ERROR
+        )
+        visible = visible.exclude(Exists(in_error))
     return visible
 
 

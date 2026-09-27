@@ -1,6 +1,7 @@
 """Forms for the record. They check formats; rules live in `services` and `access`."""
 
 from django import forms
+from django.utils import timezone
 
 from records.access import OPEN_SENSITIVITIES
 from records.models import ChangeReason, ChartEntryType, EncounterKind, Sensitivity
@@ -10,15 +11,35 @@ class DateTimeInput(forms.DateTimeInput):
     input_type = "datetime-local"
 
     def __init__(self, **kwargs):
-        super().__init__(format="%Y-%m-%dT%H:%M", **kwargs)
+        super().__init__(format=FORMAT, **kwargs)
+
+
+FORMAT = "%Y-%m-%dT%H:%M"
+
+
+class OccurredAtField(forms.DateTimeField):
+    """Entered in Europe/Berlin, to the minute.
+
+    Django refuses a time that does not exist or exists twice at the clock
+    change. `keep` is the stored time of the version being corrected: sent
+    back unchanged, it stays exactly that time, also in the repeated hour in
+    October.
+    """
+
+    def __init__(self, **kwargs):
+        self.keep = None
+        super().__init__(
+            label="Zeitpunkt", widget=DateTimeInput(), input_formats=[FORMAT], **kwargs
+        )
+
+    def to_python(self, value):
+        if self.keep is not None and value == timezone.localtime(self.keep).strftime(FORMAT):
+            return self.keep
+        return super().to_python(value)
 
 
 def _occurred_at(**kwargs):
-    # Entered in Europe/Berlin; a time that does not exist or exists twice
-    # at the clock change is refused by Django.
-    return forms.DateTimeField(
-        label="Zeitpunkt", widget=DateTimeInput(), input_formats=["%Y-%m-%dT%H:%M"], **kwargs
-    )
+    return OccurredAtField(**kwargs)
 
 
 class EncounterForm(forms.Form):
@@ -59,11 +80,20 @@ class ReasonForm(forms.Form):
         return data
 
 
-class EncounterRevisionForm(EncounterForm, ReasonForm):
-    pass
+class RevisionMixin:
+    """Keeps the stored time when it comes back unchanged (`OccurredAtField.keep`)."""
+
+    def __init__(self, *args, current=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if current is not None:
+            self.fields["occurred_at"].keep = current.occurred_at
 
 
-class ChartEntryRevisionForm(ReasonForm):
+class EncounterRevisionForm(RevisionMixin, EncounterForm, ReasonForm):
+    field_order = ["kind", "occurred_at", "change_reason", "change_reason_text"]
+
+
+class ChartEntryRevisionForm(RevisionMixin, ReasonForm):
     entry_type = forms.ModelChoiceField(label="Kürzel", queryset=ChartEntryType.objects.all())
     text = forms.CharField(label="Text", widget=forms.Textarea(attrs={"rows": 6}))
     occurred_at = _occurred_at()

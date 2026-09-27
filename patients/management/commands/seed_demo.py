@@ -121,7 +121,9 @@ class Command(BaseCommand):
     @staticmethod
     def _chart(patient, author, rng):
         """One to three past contacts with entries, now and then corrected."""
-        types = {t.code: t for t in ChartEntryType.objects.filter(code__in=ENTRY_TEXTS)}
+        types = {
+            t.code: t for t in ChartEntryType.objects.filter(code__in=ENTRY_TEXTS, is_active=True)
+        }
         now = timezone.now()
         for _ in range(rng.randint(1, 3)):
             occurred_at = now - timedelta(days=rng.randint(1, 400), minutes=rng.randrange(600))
@@ -131,7 +133,7 @@ class Command(BaseCommand):
                 occurred_at=occurred_at,
                 actor=author,
             )
-            for code in rng.sample(sorted(types), rng.randint(1, 3)):
+            for code in rng.sample(sorted(types), min(len(types), rng.randint(1, 3))):
                 entry = services.create_entry(
                     encounter,
                     entry_type=types[code],
