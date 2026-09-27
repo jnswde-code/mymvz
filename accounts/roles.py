@@ -73,10 +73,19 @@ _RESTRICTION_ADMINISTRATION = [
 # Appointment requests: doctors and MFA see and answer them, nobody else
 # (#8, decision 1). "change" covers every step and the internal note.
 _REQUESTS = ["appointments.view_appointmentrequest", "appointments.change_appointmentrequest"]
+# Callbacks from the phone assistant: the same people as requests (#45).
+_CALLBACKS = ["telephony.view_callbackrequest", "telephony.change_callbackrequest"]
 
 ROLE_PERMISSIONS = {
-    DOCTOR: [*_MASTER_DATA_EDIT, *_CHART_DOCTOR, *_CARE_TEAM, *_RESTRICTION_DOCTOR, *_REQUESTS],
-    MFA: [*_MASTER_DATA_EDIT, *_CHART_MFA, *_REQUESTS],
+    DOCTOR: [
+        *_MASTER_DATA_EDIT,
+        *_CHART_DOCTOR,
+        *_CARE_TEAM,
+        *_RESTRICTION_DOCTOR,
+        *_REQUESTS,
+        *_CALLBACKS,
+    ],
+    MFA: [*_MASTER_DATA_EDIT, *_CHART_MFA, *_REQUESTS, *_CALLBACKS],
     ADMINISTRATION: [
         "audit.view_accesslogentry",
         *_MASTER_DATA_EDIT,

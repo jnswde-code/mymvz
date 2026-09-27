@@ -20,7 +20,8 @@ GREETING = (
 PRIVACY_NOTICE = (
     "Hinweise zum Datenschutz: Dieses Gespräch wird nicht aufgezeichnet, "
     "und es wird kein Protokoll des Gesprächsinhalts gespeichert. "
-    "Gespeichert werden nur die Angaben, die Sie für eine Terminanfrage nennen. "
+    "Gespeichert werden nur die Angaben, die Sie für eine Terminanfrage "
+    "oder eine Rückrufbitte nennen. "
     "Die ausführlichen Hinweise finden Sie in der Datenschutzerklärung auf unserer Website. "
     "Wie kann ich helfen?"
 )

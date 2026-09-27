@@ -50,3 +50,33 @@ class RequestStatistic(models.Model):
 
     def __str__(self):
         return f"{self.week} {self.outcome}: {self.count}"
+
+
+class CallStatistic(models.Model):
+    """Calls to the phone assistant, counted without any personal reference (#14, #17).
+
+    A `telephony.CallRecord` is added here after 30 days and then deleted
+    (#45). Calls are not requests, so they get their own table next to
+    `RequestStatistic` (#14, decision 4 of 27.09.).
+    """
+
+    # Monday of the calendar week the call came in, in Europe/Berlin.
+    week = models.DateField()
+    # Values of `CallRecord.Mode` and `CallRecord.Outcome`, as plain text so
+    # the counts outlive a change of those lists.
+    mode = models.CharField(max_length=16)
+    outcome = models.CharField(max_length=20)
+    count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["week"]
+        verbose_name = "Zählerstand Anrufe"
+        verbose_name_plural = "Zählerstände Anrufe"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["week", "mode", "outcome"], name="reporting_callstatistic_one_row_per_group"
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.week} {self.mode} {self.outcome}: {self.count}"

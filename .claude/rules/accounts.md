@@ -74,7 +74,8 @@ paths:
   Schutzstufen; Team und Freigaben pflegen Ärztinnen/Ärzte (#38, Migration
   `0006`). Was die Rechte bedeuten und die Prüfung je Datensatz stehen in
   `records/access.py`, nicht hier. Terminanfragen sehen
-  und bearbeiten nur Ärztinnen/Ärzte und MFA (#8, Migration `0005`).
+  und bearbeiten nur Ärztinnen/Ärzte und MFA (#8, Migration `0005`),
+  ebenso die Rückrufbitten des Telefonassistenten (#45, Migration `0008`).
 
 ## accounts/management/commands/
 

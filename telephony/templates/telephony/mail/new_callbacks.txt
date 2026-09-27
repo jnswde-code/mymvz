@@ -1,0 +1,4 @@
+{% autoescape off %}Es gibt eine neue Rückrufbitte vom Telefonassistenten. Sie steht in der Liste:
+{{ list_url }}
+
+Diese E-Mail enthält bewusst keine Angaben zur Rückrufbitte.{% endautoescape %}

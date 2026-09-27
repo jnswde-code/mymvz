@@ -19,9 +19,13 @@ vorschlagen oder ablehnen, interne Notiz. Unter `/anfragen/termine/` stehen
 die Termine, die noch in Medical Office ein- oder dort auszutragen sind, die
 kommenden und die Absagen der letzten 14 Tage. Auf der Anfrage sagt das Team
 Termine ab (für die Praxis oder nach einem Anruf), zieht Vorschläge zurück und
-ordnet die Anfrage nach einem Namensvergleich einem Patienten zu. Ein
-Worker sendet die Mails (bei Fehlern mit Wiederholung) und lässt
-abgelaufene Vorschläge und Anfragen verfallen; der Löschlauf folgt mit #9.
+ordnet die Anfrage nach einem Namensvergleich einem Patienten zu.
+Rückrufbitten vom Telefonassistenten (Rezept, Überweisung, AU, Befund,
+Rückruf, Absage/Verschiebung) stehen unter `/rueckrufe/` und werden nach dem
+Rückruf abgehakt. Ein Worker sendet die Mails (bei Fehlern mit
+Wiederholung), lässt abgelaufene Vorschläge, Anfragen und Rückrufbitten
+verfallen und zählt Anrufe nach 30 Tagen in Zählerstände um; der Löschlauf
+für Anfragen folgt mit #9.
 
 ## Voraussetzungen
 
@@ -116,8 +120,10 @@ Website unter `/intern/telefon/`. Dafür in der `.env` `VOICE_API_KEY` auf
 einen langen Zufallswert setzen und `web` in `DJANGO_EXTRA_HOSTS`
 aufnehmen; ohne Schlüssel ist die API aus, und der Assistent sagt, dass er
 gerade nichts aufnehmen kann. Anfragen vom Telefon erscheinen unter
-`/anfragen/` mit dem Kennzeichen „Telefon“. Mit der LLM-Attrappe ruft der
-Agent die Werkzeuge nicht auf; das geht erst mit einem echten LLM (#18).
+`/anfragen/` mit dem Kennzeichen „Telefon“, Rückrufbitten (#45) unter
+`/rueckrufe/`. Am Ende jedes Anrufs meldet der Agent einen Eintrag ohne
+Rufnummer und Inhalt (Beginn, Dauer, Ergebnis). Mit der LLM-Attrappe ruft
+der Agent die Werkzeuge nicht auf; das geht erst mit einem echten LLM (#18).
 
 ## Tests und Linter
 
@@ -139,8 +145,8 @@ Pull Request.
 | `patients/` | Patientenstamm: Stammdaten, Kennungen, Verlauf, Behandlungsteam, Freigaben, Sperrvermerk, Notfallzugriff |
 | `records/` | Akte: Kontakte und Karteikarte in unveränderlichen Fassungen |
 | `appointments/` | Terminanfrage, Termine, Links in Mails, Spam-Schutz |
-| `telephony/` | Telefonassistent: interne API für den Sprachdienst |
-| `jobs/` | Worker: Postausgang, Verfall, Meldung fehlgeschlagener Läufe |
+| `telephony/` | Telefonassistent: interne API für den Sprachdienst, Rückrufbitten, Anrufprotokoll ohne Inhalt |
+| `jobs/` | Worker: Postausgang, Verfall, Fristen der Rückrufbitten, Meldung fehlgeschlagener Läufe |
 | `reporting/` | Zählerstände ohne Personenbezug für Auswertungen |
 | `templates/` | gemeinsame Templates |
 | `voice/` | Sprachdienst mit eigenem Image |
