@@ -27,6 +27,27 @@ services:
       db:
         condition: service_healthy
 
+  # Worker (#9): sends the mails of the outbox and runs the jobs of the
+  # system. Same image and .env as `web`; mails appear in its console.
+  worker:
+    build:
+      context: .
+      target: dev
+    command: ["python", "manage.py", "run_worker"]
+    env_file: .env
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "manage.py", "worker_health"]
+      interval: 60s
+      timeout: 30s
+      start_period: 60s
+    # A pass may be sending mails; SIGTERM lets it finish.
+    stop_grace_period: 60s
+
   # Voice agent (#13) with a LiveKit server for development. Profile
   # `voice`, so `docker compose up` still starts only the website.
   livekit:

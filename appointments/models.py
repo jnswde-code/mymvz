@@ -434,3 +434,43 @@ class RequestToken(models.Model):
 
     def __str__(self):
         return f"{self.purpose} bis {self.expires_at:%Y-%m-%d %H:%M}"
+
+
+class OutgoingMail(models.Model):
+    """One e-mail for the worker to send (#9). The outbox of `appointments.mail`.
+
+    Only the kind and the ids: recipient, text and link tokens are made when
+    the mail goes out (#5 section 6). Deleting the request deletes its mails.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # One of the kinds in `appointments.mail`.
+    kind = models.CharField(max_length=32)
+    request = models.ForeignKey(
+        AppointmentRequest, on_delete=models.CASCADE, related_name="outgoing_mails"
+    )
+    appointment = models.ForeignKey(
+        Appointment, on_delete=models.CASCADE, null=True, blank=True, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    next_attempt_at = models.DateTimeField()
+    sent_at = models.DateTimeField(null=True, blank=True)
+    # Given up after `APPOINTMENTS_MAIL_GIVE_UP_AFTER`; the operations address is told.
+    failed_at = models.DateTimeField(null=True, blank=True)
+    # Name of the exception only; its text may contain the recipient.
+    last_error = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        verbose_name = "ausgehende Mail"
+        verbose_name_plural = "Postausgang"
+        indexes = [
+            models.Index(
+                fields=["next_attempt_at"],
+                condition=Q(sent_at__isnull=True, failed_at__isnull=True),
+                name="appointments_outbox_pending",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.kind} {self.created_at:%Y-%m-%d %H:%M}"

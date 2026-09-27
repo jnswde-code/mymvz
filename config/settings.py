@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "appointments",
     "reporting",
     "telephony",
+    "jobs",
 ]
 
 # Must be set before the first migration; changing it later is costly (#5, #25).
@@ -139,6 +140,10 @@ EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
 DEFAULT_FROM_EMAIL = env_str("DEFAULT_FROM_EMAIL")
 # Gets "new request" and "cancelled" without any content (#7).
 PRACTICE_NOTIFICATION_EMAIL = env_str("PRACTICE_NOTIFICATION_EMAIL")
+# Gets "a run of the worker failed", without any content (#9, decision 3).
+OPERATIONS_ALERT_EMAIL = env_str("OPERATIONS_ALERT_EMAIL", PRACTICE_NOTIFICATION_EMAIL)
+# Seconds; without it a hanging mail server would stop the worker for good.
+EMAIL_TIMEOUT = 30
 
 # Appointment requests (#5, decisions of 26.09.2026). Defaults until the
 # practice names other values.
@@ -152,6 +157,10 @@ APPOINTMENTS_RETENTION_DAYS = 30
 APPOINTMENTS_SUBMISSIONS_PER_HOUR = 10
 # Version of the privacy notice shown with the form; stored with each request.
 APPOINTMENTS_PRIVACY_NOTICE_VERSION = "2026-09-26"
+# Outbox (#9): wait after the 1st, 2nd, … failed attempt, the last step
+# repeats; the mail is given up this long after it was queued.
+APPOINTMENTS_MAIL_RETRY_MINUTES = (1, 5, 15, 60)
+APPOINTMENTS_MAIL_GIVE_UP_AFTER = timedelta(hours=24)
 # Proof of work of the captcha: the client tries on average half of these.
 APPOINTMENTS_CAPTCHA_MAX_NUMBER = 300_000
 
@@ -161,3 +170,23 @@ VOICE_API_KEY = env_optional("VOICE_API_KEY")
 if 0 < len(VOICE_API_KEY) < 32:
     # Port 8000 is published in development; a short key is guessable.
     raise ImproperlyConfigured("VOICE_API_KEY braucht mindestens 32 Zeichen (s. .env.example)")
+
+# Logs go to stdout, Docker collects them. Only the worker and the outbox log
+# for now (#9); their lines name the job, the kind of mail and numbers, never
+# records, names or addresses.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"plain": {"format": "{asctime} {levelname} {name} {message}", "style": "{"}},
+    "handlers": {
+        "stdout": {
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
+            "formatter": "plain",
+        }
+    },
+    "loggers": {
+        name: {"handlers": ["stdout"], "level": "INFO", "propagate": False}
+        for name in ("jobs", "appointments.mail")
+    },
+}

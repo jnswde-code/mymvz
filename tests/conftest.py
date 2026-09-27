@@ -1,6 +1,6 @@
 import re
+from contextlib import contextmanager
 from datetime import datetime
-from functools import partial
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -23,9 +23,24 @@ def _empty_cache():
 
 
 @pytest.fixture
-def commit(django_capture_on_commit_callbacks):
-    """`with commit(): …` runs what waits for the commit (the mails) at the end."""
-    return partial(django_capture_on_commit_callbacks, execute=True)
+def commit():
+    """`with commit(): …` sends the mails of the block at its end.
+
+    Mails wait in the outbox until the worker sends them (#9); this plays the
+    worker once, in the time of the block. Mails of steps outside a block are
+    dropped, as they were when mails went out on commit, which tests never
+    reached without this helper.
+    """
+    from appointments.mail import process_outbox
+    from appointments.models import OutgoingMail
+
+    @contextmanager
+    def run():
+        OutgoingMail.objects.filter(sent_at__isnull=True).delete()
+        yield
+        process_outbox()
+
+    return run
 
 
 LINK = re.compile(r"/termin/link/([A-Za-z0-9_-]+)/")

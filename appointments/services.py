@@ -42,6 +42,7 @@ from appointments.models import (
     TokenPurpose,
 )
 from audit.log import log_access
+from config import batch
 from patients import services as patient_services
 from patients.models import Patient
 from practice.models import OpeningHours, Resource
@@ -793,31 +794,41 @@ def open_working_days(request, today) -> int:
 
 
 def expire_overdue_proposals(now=None) -> int:
-    """Proposals past their deadline are cancelled; the request is open again."""
+    """Proposals past their deadline are cancelled; the request is open again.
+
+    Called by the worker (#9). One failing proposal does not stop the others
+    (`PartialFailure`).
+    """
     now = now or timezone.now()
-    count = 0
     due = Appointment.objects.filter(status=AStatus.PROPOSED, proposal_expires_at__lte=now)
-    for appointment_id in due.values_list("pk", flat=True):
-        with transaction.atomic():
-            appointment = Appointment.objects.select_for_update().get(pk=appointment_id)
-            if appointment.status != AStatus.PROPOSED or appointment.proposal_expires_at > now:
-                continue
-            request = _lock(appointment.request)
-            _cancel(
-                appointment,
-                request,
-                cancelled_by=Appointment.CancelledBy.SYSTEM,
-                channel="",
-                actor_kind=ActorKind.SYSTEM,
-                reason=Reason.PROPOSAL_EXPIRED,
-                now=now,
-            )
-            count += 1
-    return count
+
+    @transaction.atomic
+    def expire(appointment_id) -> bool:
+        appointment = Appointment.objects.select_for_update().filter(pk=appointment_id).first()
+        if appointment is None or appointment.status != AStatus.PROPOSED:
+            return False
+        if appointment.proposal_expires_at > now:
+            return False
+        request = _lock(appointment.request)
+        _cancel(
+            appointment,
+            request,
+            cancelled_by=Appointment.CancelledBy.SYSTEM,
+            channel="",
+            actor_kind=ActorKind.SYSTEM,
+            reason=Reason.PROPOSAL_EXPIRED,
+            now=now,
+        )
+        return True
+
+    return batch.each(list(due.values_list("pk", flat=True)), expire)
 
 
 def expire_overdue_requests(now=None) -> int:
-    """Open requests whose preferred days are all over expire (#5, decision 5)."""
+    """Open requests whose preferred days are all over expire (#5, decision 5).
+
+    Called by the worker (#9), like `expire_overdue_proposals`.
+    """
     now = now or timezone.now()
     today = timezone.localdate(now)
     due = (
@@ -825,17 +836,18 @@ def expire_overdue_requests(now=None) -> int:
         .annotate(last_day=Max("time_windows__date"))
         .filter(last_day__lt=today)
     )
-    count = 0
-    for request_id in due.values_list("pk", flat=True):
-        with transaction.atomic():
-            request = AppointmentRequest.objects.select_for_update().get(pk=request_id)
-            if request.status != Status.OPEN:
-                continue
-            _move(request, Status.EXPIRED, ActorKind.SYSTEM, now=now)
-            _set_delete_after(request)
-            mail.queue(mail.EXPIRED, request)
-            count += 1
-    return count
+
+    @transaction.atomic
+    def expire(request_id) -> bool:
+        request = AppointmentRequest.objects.select_for_update().filter(pk=request_id).first()
+        if request is None or request.status != Status.OPEN:
+            return False
+        _move(request, Status.EXPIRED, ActorKind.SYSTEM, now=now)
+        _set_delete_after(request)
+        mail.queue(mail.EXPIRED, request)
+        return True
+
+    return batch.each(list(due.values_list("pk", flat=True)), expire)
 
 
 # --- Patients --------------------------------------------------------------

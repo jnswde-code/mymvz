@@ -18,6 +18,12 @@ paths:
   für inhaltsleere Hinweise) kommt ebenfalls aus `.env` (#7).
 - Fristen der Terminanfrage (`APPOINTMENTS_*`) stehen als Einstellungen an
   einer Stelle, mit den Vorgaben aus #5, bis die Praxis andere nennt.
+- `OPERATIONS_ALERT_EMAIL` bekommt Meldungen des Workers, Vorgabe ist die
+  Adresse der Praxis (#9, Entscheidung 3). `EMAIL_TIMEOUT`, damit ein
+  hängender Mailserver den Worker nicht dauerhaft anhält.
+- `LOGGING` schreibt nach stdout, Docker sammelt es. Konfiguriert sind nur
+  die Logger des Workers und des Postausgangs (#49); ihre Zeilen nennen nie
+  Datensätze, Namen oder Adressen.
 - `env_bool` bricht bei unbekannten Werten ab, statt still `False` zu nehmen:
   Ein Tippfehler bei `DJANGO_DEBUG` soll nicht unbemerkt die Einstellung
   kippen (#4).

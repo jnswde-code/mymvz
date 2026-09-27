@@ -65,7 +65,9 @@ wissen muss.
   E-Mail bzw. der Anlage (#8, Entscheidungen 5 und 8); die offene Liste ist
   danach sortiert.
 - `expire_overdue_requests` und `expire_overdue_proposals` sind die Läufe des
-  Systems; aufrufen soll sie der Worker aus #9.
+  Systems; der Worker ruft sie auf (#49). Jeder Datensatz in eigener
+  Transaktion (`config.batch.each`), einer, der wirft, hält die anderen
+  nicht auf.
 - Ein abgelehnter, verfallener oder zurückgezogener Vorschlag setzt die
   Anfrage immer auf `open`, eine Absage eines gebuchten Termins nur mit
   `reopen`.
@@ -144,10 +146,17 @@ wissen muss.
   und verlinken die Liste, nie eine einzelne Anfrage.
 - Den Text der Ablehnung wählt nur der feste Grund aus dem Verlauf
   (`DECLINE_REASONS`), nie ein Freitext des Teams (#3 Abschnitt 2).
-- `queue` merkt sich nur Art und IDs und sendet nach dem Commit; Text und
-  Tokens entstehen erst in `send`. So kann #9 `send` in den Worker verlegen,
-  ohne die Aufrufer zu ändern. In Tests deshalb `with commit():`
-  (`tests/conftest.py`).
+- `queue` schreibt nur Art und IDs in den Postausgang `OutgoingMail`, in
+  der Transaktion des Übergangs; der Worker sendet (`process_outbox`, #49).
+  Kein Empfänger und kein Text in der Tabelle, Text und Tokens entstehen
+  erst in `send` (#5 Abschnitt 6). Nach einem Rollback gibt es keine Mail,
+  nach einem Absturz geht keine verloren. In Tests `with commit():`
+  (`tests/conftest.py`), das den Worker einmal spielt.
+- Fehlgeschlagene Mails wiederholt der Worker nach 1, 5, 15, 60 Minuten,
+  dann stündlich, und gibt sie nach 24 Stunden auf; das meldet der Lauf.
+  `last_error` hält nur die Klasse der Ausnahme, SMTP-Fehler nennen die
+  Adresse. Stirbt der Worker zwischen Versand und Commit, geht die Mail
+  doppelt raus; eine verlorene Bestätigung wöge schwerer (#9 Abschnitt 3).
 
 ## appointments/captcha.py, appointments/spam.py
 
