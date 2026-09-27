@@ -3,7 +3,7 @@
 from django import forms
 from django.utils import timezone
 
-from records.access import OPEN_SENSITIVITIES
+from records.access import writable_sensitivities
 from records.models import ChangeReason, ChartEntryType, EncounterKind, Sensitivity
 
 
@@ -53,11 +53,16 @@ class ChartEntryForm(forms.Form):
     )
     text = forms.CharField(label="Text", widget=forms.Textarea(attrs={"rows": 4}))
     occurred_at = _occurred_at(required=False, help_text="leer: Zeitpunkt des Kontakts")
-    sensitivity = forms.ChoiceField(
-        label="Schutzstufe",
-        choices=[(s.value, s.label) for s in Sensitivity if s in OPEN_SENSITIVITIES],
-        initial=Sensitivity.NORMAL,
-    )
+    sensitivity = forms.ChoiceField(label="Schutzstufe")
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only the levels the user may write; the first is the default of
+        # the role (#38). `services` checks it again.
+        levels = writable_sensitivities(user)
+        field = self.fields["sensitivity"]
+        field.choices = [(level.value, Sensitivity(level).label) for level in levels]
+        field.initial = levels[0] if levels else None
 
 
 class ReasonForm(forms.Form):

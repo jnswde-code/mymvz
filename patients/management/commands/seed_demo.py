@@ -112,9 +112,15 @@ class Command(BaseCommand):
         if username is None:
             return None
         author = get_user_model().objects.filter(username=username).first()
-        if author is None or not access.can_write(author, None):
+        # The texts are ordinary entries, for patients without a care team.
+        if (
+            author is None
+            or not author.has_perm(access.ALL_PATIENTS)
+            or access.Sensitivity.NORMAL not in access.writable_sensitivities(author)
+        ):
             raise CommandError(
-                "--author braucht ein aktives Konto, das in die Akte schreiben darf."
+                "--author braucht ein aktives Konto, das bei allen Patienten "
+                "in die Akte schreiben darf."
             )
         return author
 

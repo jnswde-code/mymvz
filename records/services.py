@@ -21,7 +21,6 @@ from records.models import (
     ChartEntry,
     ChartEntryType,
     Encounter,
-    Sensitivity,
     Status,
     VersionedRecord,
 )
@@ -52,9 +51,9 @@ def _clinical_time(occurred_at, now):
     return occurred_at
 
 
-def _check_sensitivity(sensitivity):
-    if sensitivity not in access.OPEN_SENSITIVITIES:
-        raise ValidationError({"sensitivity": "Diese Schutzstufe ist noch nicht wählbar."})
+def _check_sensitivity(actor, sensitivity):
+    if sensitivity not in access.writable_sensitivities(actor):
+        raise ValidationError({"sensitivity": "Diese Schutzstufe ist für Sie nicht wählbar."})
 
 
 def _check_reason(change_reason, change_reason_text):
@@ -186,12 +185,19 @@ def create_entry(
     text,
     actor,
     occurred_at=None,
-    sensitivity=Sensitivity.NORMAL,
+    sensitivity=None,
 ) -> ChartEntry:
-    """A new entry for a contact; its time defaults to that of the contact."""
+    """A new entry for a contact; its time defaults to that of the contact.
+
+    Without `sensitivity` it gets the default of the author's role
+    (`access.writable_sensitivities`), so psychology writes psychotherapy.
+    """
     if not access.can_write(actor, encounter.patient) or not access.can_view(actor, encounter):
         raise PermissionDenied
-    _check_sensitivity(sensitivity)
+    if sensitivity is None:
+        # Not empty: `can_write` above needs at least one level.
+        sensitivity = access.writable_sensitivities(actor)[0]
+    _check_sensitivity(actor, sensitivity)
     # Lock the contact, so it cannot be marked as error in between. If it was
     # corrected meanwhile, the first query finds nothing once the lock is
     # released; the second one sees the new version.
@@ -278,7 +284,10 @@ def mark_entered_in_error(
             encounter_lineage_id=head.lineage_id, status=Status.ACTIVE
         ).exists()
     ):
-        raise ValidationError("Erst die Einträge dieses Kontakts als Irrtum markieren.")
+        raise ValidationError(
+            "Erst die Einträge dieses Kontakts als Irrtum markieren, auch solche "
+            "mit Zugriffsbeschränkung (durch ihre Autorin oder ihren Autor)."
+        )
     successor = _successor(
         head,
         actor=actor,

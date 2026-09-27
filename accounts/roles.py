@@ -23,24 +23,47 @@ ROLES = {
     "nutrition": NUTRITION,
 }
 
+# Roles whose members see the chart only for patients whose care team they
+# are on (#23 section 5.1); the patient page offers them for the team.
+# Nutrition joins once it reads something (allergies, K4).
+CARE_TEAM_ROLES = [PSYCHOLOGY, ADDICTION_THERAPY]
+
 # Permissions per group, as "app_label.codename". Only what exists today.
 # Master data: doctors, MFA and the administration read and change it, the
-# other professions only read it (#23 section 5.1, #26). The chart: doctors
-# and MFA only until K2.2 (#37); what the permissions mean and the checks per
-# record are in `records/access.py`.
+# other professions only read it (#23 section 5.1, #26). The chart and its
+# protection levels (#37, #38): what the permissions mean and the checks per
+# record are in `records/access.py`. Doctors keep the care team and record
+# consents (#38).
 _MASTER_DATA_EDIT = ["patients.view_patient", "patients.add_patient", "patients.change_patient"]
 _MASTER_DATA_READ = ["patients.view_patient"]
-_CHART_MFA = ["records.view_chartentry", "records.add_chartentry"]
-_CHART_DOCTOR = [*_CHART_MFA, "records.change_chartentry", "records.view_entered_in_error"]
+_CHART = ["records.view_chartentry", "records.add_chartentry"]
+_CHART_MFA = [*_CHART, "records.view_all_patients", "records.write_normal"]
+_CHART_DOCTOR = [
+    *_CHART_MFA,
+    "records.change_chartentry",
+    "records.view_entered_in_error",
+    "records.view_addiction",
+    "records.write_addiction",
+    "records.write_psychotherapy",
+]
+_CHART_PSYCHOLOGY = [*_CHART, "records.write_psychotherapy"]
+_CHART_ADDICTION_THERAPY = [*_CHART, "records.view_addiction", "records.write_addiction"]
+_CARE_TEAM = [
+    "patients.add_careteammember",
+    "patients.change_careteammember",
+    "patients.view_consenttoshare",
+    "patients.add_consenttoshare",
+    "patients.change_consenttoshare",
+]
 # Appointment requests: doctors and MFA see and answer them, nobody else
 # (#8, decision 1). "change" covers every step and the internal note.
 _REQUESTS = ["appointments.view_appointmentrequest", "appointments.change_appointmentrequest"]
 
 ROLE_PERMISSIONS = {
-    DOCTOR: [*_MASTER_DATA_EDIT, *_CHART_DOCTOR, *_REQUESTS],
+    DOCTOR: [*_MASTER_DATA_EDIT, *_CHART_DOCTOR, *_CARE_TEAM, *_REQUESTS],
     MFA: [*_MASTER_DATA_EDIT, *_CHART_MFA, *_REQUESTS],
     ADMINISTRATION: ["audit.view_accesslogentry", *_MASTER_DATA_EDIT],
-    PSYCHOLOGY: _MASTER_DATA_READ,
-    ADDICTION_THERAPY: _MASTER_DATA_READ,
+    PSYCHOLOGY: [*_MASTER_DATA_READ, *_CHART_PSYCHOLOGY],
+    ADDICTION_THERAPY: [*_MASTER_DATA_READ, *_CHART_ADDICTION_THERAPY],
     NUTRITION: _MASTER_DATA_READ,
 }

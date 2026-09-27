@@ -224,6 +224,8 @@ class Reason(models.TextChoices):
 PATIENT_CANCELLATION_REASONS = [Reason.NO_LONGER_FITS, Reason.TREATED_ELSEWHERE, Reason.OTHER]
 # What the team may choose when declining a request; each has its own mail text.
 DECLINE_REASONS = [Reason.PLEASE_CALL, Reason.NOT_BOOKABLE_ONLINE, Reason.OTHER]
+# What the team may choose when the practice cancels a booked appointment.
+PRACTICE_CANCELLATION_REASONS = [Reason.PRACTICE_UNAVAILABLE, Reason.OTHER]
 
 
 class Appointment(models.Model):
@@ -258,6 +260,12 @@ class Appointment(models.Model):
     cancelled_by = models.CharField(max_length=16, choices=CancelledBy, blank=True)
     cancellation_channel = models.CharField(max_length=16, choices=CancellationChannel, blank=True)
     cancellation_reason = models.CharField(max_length=32, choices=Reason, blank=True)
+    # Medical Office stays the calendar in stage 1 (#8, decision 2). The team
+    # ticks when it has entered a booked appointment there and when it has
+    # removed a cancelled one; `services.list_appointments` builds the work
+    # lists from these. No status and no event: nothing changes for the patient.
+    medical_office_entered_at = models.DateTimeField(null=True, blank=True)
+    medical_office_removed_at = models.DateTimeField(null=True, blank=True)
     # Own deletion date, so an appointment may outlive its request in stage 4.
     delete_after = models.DateTimeField(null=True, blank=True, db_index=True)
     # Follows the request (`services.assign_patient`, #26).
@@ -297,6 +305,12 @@ class Appointment(models.Model):
                 condition=Q(status="cancelled", cancelled_at__isnull=False)
                 | Q(~Q(status="cancelled"), cancelled_at__isnull=True),
                 name="appointments_cancelled_iff_cancelled_at",
+            ),
+            # Only what was entered can be removed.
+            models.CheckConstraint(
+                condition=Q(medical_office_removed_at__isnull=True)
+                | Q(medical_office_entered_at__isnull=False),
+                name="appointments_removed_only_after_entered",
             ),
         ]
 

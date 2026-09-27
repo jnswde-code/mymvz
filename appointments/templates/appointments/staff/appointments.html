@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Termine – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  <p><a href="{% url 'appointments_staff:list' %}">Zu den Anfragen</a></p>
+  <h1>Termine</h1>
+  <p>
+    Zeige:
+    {% for value, label in choices %}
+      {% if value == shown %}<strong>{{ label }}</strong>{% else %}<a href="?zeige={{ value }}">{{ label }}</a>{% endif %}{% if not forloop.last %} · {% endif %}
+    {% endfor %}
+  </p>
+  {% if appointments %}
+    <table>
+      <thead>
+        <tr>
+          <th>Termin</th><th>Kennung</th><th>Name</th><th>Geburtsdatum</th><th>Terminart</th><th>Ärztin/Arzt</th><th>Stand</th>
+          {% if shown == "absagen" %}<th>abgesagt</th>{% endif %}
+          {% if shown == "einzutragen" or shown == "auszutragen" %}<th></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for appointment in appointments %}
+          {% with req=appointment.request %}
+            <tr>
+              <td>{{ appointment.start|date:"D d.m.Y H:i" }}–{{ appointment.end|date:"H:i" }}</td>
+              <td><a href="{% url 'appointments_staff:detail' req.pk %}">{{ req.reference }}</a></td>
+              <td>{{ req.patient_last_name }}, {{ req.patient_first_name }}</td>
+              <td>{{ req.patient_date_of_birth|date:"d.m.Y" }}</td>
+              <td>{{ appointment.appointment_type.name }}</td>
+              <td>{% for resource in appointment.resources.all %}{{ resource.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+              <td>{{ appointment.get_status_display }}{% if appointment.medical_office_removed_at %}, aus Medical Office ausgetragen{% elif appointment.medical_office_entered_at and shown != "auszutragen" %}, noch in Medical Office{% endif %}</td>
+              {% if shown == "absagen" %}
+                <td>{{ appointment.cancelled_at|date:"d.m.Y H:i" }} über {{ appointment.get_cancellation_channel_display }}</td>
+              {% endif %}
+              {% if shown == "einzutragen" or shown == "auszutragen" %}
+                <td>
+                  {% if perms.appointments.change_appointmentrequest %}
+                    <form method="post" action="{% if shown == "einzutragen" %}{% url 'appointments_staff:entered' req.pk appointment.pk %}{% else %}{% url 'appointments_staff:removed' req.pk appointment.pk %}{% endif %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="zurueck" value="{{ shown }}">
+                      <button type="submit">{% if shown == "einzutragen" %}eingetragen{% else %}ausgetragen{% endif %}</button>
+                    </form>
+                  {% endif %}
+                </td>
+              {% endif %}
+            </tr>
+          {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>Keine Termine.</p>
+  {% endif %}
+{% endblock %}
