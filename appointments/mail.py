@@ -12,6 +12,7 @@ may be read by others, and e-mail is not end-to-end encrypted (#3 section 2,
 """
 
 import logging
+import time
 from datetime import timedelta
 
 from django.conf import settings
@@ -46,6 +47,10 @@ PRACTICE_CANCELLED = "practice_cancelled"
 
 logger = logging.getLogger("appointments.mail")
 
+# Seconds after which a pass takes no further mail; the rest goes in the next
+# pass. So SIGTERM ends the worker within its grace period even with a backlog.
+PASS_TIME_LIMIT = 20
+
 SUBJECTS = {
     VERIFY_EMAIL: "Bitte bestätigen Sie Ihre Terminanfrage",
     RECEIVED: "Ihre Terminanfrage ist eingegangen",
@@ -76,7 +81,7 @@ def retry_delay(attempts: int) -> timedelta:
 
 
 def process_outbox(now=None) -> int:
-    """Send every mail that is due; the worker calls this on every pass (#9).
+    """Send the due mails for up to `PASS_TIME_LIMIT` s; the worker calls this each pass (#9).
 
     Each mail in its own transaction, locked with SKIP LOCKED, so a second
     worker never picks the same one. A failed mail is tried again after
@@ -86,9 +91,10 @@ def process_outbox(now=None) -> int:
     confirmation weighs more.
     """
     now = now or timezone.now()
+    started = time.monotonic()
     sent = 0
     given_up = []
-    while True:
+    while time.monotonic() - started < PASS_TIME_LIMIT:
         with transaction.atomic():
             row = (
                 OutgoingMail.objects.select_for_update(skip_locked=True)
