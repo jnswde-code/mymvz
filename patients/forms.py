@@ -2,7 +2,6 @@
 
 from django import forms
 from django.contrib.auth import get_user_model
-from django.db.models import Q
 
 from accounts.roles import CARE_TEAM_ROLES
 from patients.models import ConsentArea, IdentifierSystem, Patient
@@ -87,21 +86,18 @@ class ConsentForm(forms.Form):
     area = forms.ChoiceField(label="Bereich", choices=ConsentArea.choices)
     user = AccountChoiceField(label="Person", queryset=get_user_model().objects.none())
     valid_until = forms.DateField(
-        label="bis", required=False, widget=DateInput(), help_text="erster Tag ohne Freigabe"
+        label="endet am",
+        required=False,
+        widget=DateInput(),
+        help_text="ab diesem Tag ohne Freigabe; leer: bis sie beendet wird",
     )
 
     def __init__(self, *args, actor, **kwargs):
         super().__init__(*args, **kwargs)
-        # Accounts with the chart right; `services.grant_consent` checks again.
-        app_label, codename = CHART_PERMISSION.split(".")
-        right = {"content_type__app_label": app_label, "codename": codename}
-        with_right = Q(**{f"groups__permissions__{k}": v for k, v in right.items()}) | Q(
-            **{f"user_permissions__{k}": v for k, v in right.items()}
-        )
+        # Active accounts with the chart right; `services.grant_consent` checks again.
         self.fields["user"].queryset = (
             get_user_model()
-            .objects.filter(with_right, is_active=True)
+            .objects.with_perm(CHART_PERMISSION)
             .exclude(pk=actor.pk)
-            .distinct()
             .order_by("last_name", "first_name", "username")
         )

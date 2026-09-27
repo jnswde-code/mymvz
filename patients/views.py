@@ -8,6 +8,7 @@ number of hits and never the terms. Unknown patients answer 404.
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import ValidationError
+from django.db.models import F
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
@@ -22,7 +23,13 @@ from patients.forms import (
     PatientForm,
     SearchForm,
 )
-from patients.models import CareTeamMember, ConsentToShare, Patient, PatientIdentifier
+from patients.models import (
+    CareTeamMember,
+    ConsentToShare,
+    Patient,
+    PatientIdentifier,
+    is_on_care_team,
+)
 
 
 def _master_data(form) -> dict:
@@ -84,11 +91,16 @@ def detail_view(request, pk):
         "identifier_form": IdentifierForm(),
     }
     # Who treats a patient, and in which protected area, is itself clinical
-    # (#38): the team only for those with the chart, consents only for those
-    # who keep them.
-    if user.has_perm("records.view_chartentry"):
+    # (#38): the team only for those who see this chart, consents only for
+    # those who keep them. Same rule as `records.access.can_view_chart`,
+    # which `patients` does not import.
+    sees_chart = user.has_perm("records.view_chartentry") and (
+        user.has_perm("records.view_all_patients") or is_on_care_team(user, patient)
+    )
+    context["sees_chart"] = sees_chart
+    if sees_chart:
         context["care_team"] = patient.care_team.select_related("user").order_by(
-            "valid_until", "valid_from"
+            F("valid_until").asc(nulls_first=True), "-valid_from"
         )
         if user.has_perm("patients.add_careteammember"):
             context["care_team_form"] = CareTeamForm(patient=patient)
@@ -124,8 +136,7 @@ def add_identifier_view(request, pk):
         try:
             services.add_identifier(patient, actor=request.user, **form.cleaned_data)
         except ValidationError as error:
-            for message in error.messages:
-                messages.error(request, message)
+            _show_errors(request, error)
         else:
             messages.success(request, "Kennung hinzugefügt.")
     else:
@@ -141,8 +152,7 @@ def end_identifier_view(request, pk, identifier_pk):
     try:
         services.end_identifier(identifier, actor=request.user)
     except ValidationError as error:
-        for message in error.messages:
-            messages.error(request, message)
+        _show_errors(request, error)
     else:
         messages.success(request, "Kennung beendet.")
     return redirect("patients:detail", pk=pk)

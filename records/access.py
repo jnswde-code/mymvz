@@ -33,7 +33,7 @@ Roles come as Django permissions (`accounts/roles.py`):
 from django.db.models import Count, Exists, OuterRef, Q
 from django.utils import timezone
 
-from patients.models import CareTeamMember, ConsentToShare, valid_on
+from patients.models import CareTeamMember, ConsentToShare, is_on_care_team, valid_on
 from records.models import ChartEntry, Encounter, Sensitivity, Status
 
 VIEW = "records.view_chartentry"
@@ -70,11 +70,7 @@ def _consent_patients(user, area, day):
 def can_view_chart(user, patient) -> bool:
     if not has_chart_role(user):
         return False
-    if user.has_perm(ALL_PATIENTS):
-        return True
-    return CareTeamMember.objects.filter(
-        valid_on(timezone.localdate()), user=user, patient=patient
-    ).exists()
+    return user.has_perm(ALL_PATIENTS) or is_on_care_team(user, patient)
 
 
 def writable_sensitivities(user) -> list:
@@ -85,11 +81,7 @@ def writable_sensitivities(user) -> list:
 
 
 def can_write(user, patient) -> bool:
-    return (
-        can_view_chart(user, patient)
-        and user.has_perm(WRITE)
-        and bool(writable_sensitivities(user))
-    )
+    return can_view_chart(user, patient) and bool(writable_sensitivities(user))
 
 
 def can_view_errors(user) -> bool:

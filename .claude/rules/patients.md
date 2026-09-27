@@ -20,11 +20,13 @@ beim Ändern wissen muss.
   eine alte Nummer nie auf eine zweite Person zeigt. Je Patient und System
   gilt höchstens eine Nummer. Kennungen und Mitglieder des Behandlungsteams
   werden beendet (`valid_until`), nie gelöscht.
-- `CareTeamMember`: Psychologie, Suchttherapie und Ernährung sehen
-  klinische Inhalte nur bei Patienten, in deren Team sie stehen (#38,
-  Prüfung in `records/access.py`). `valid_on` ist die eine Definition von
-  „gilt heute“ für Team und Freigaben; `valid_until` ist der erste Tag ohne
-  Zugang.
+- `CareTeamMember`: Psychologie und Suchttherapie sehen die Akte nur bei
+  Patienten, in deren Team sie stehen (#38, Prüfung in `records/access.py`
+  über `is_on_care_team`); Ernährung kommt dazu, sobald sie etwas liest
+  (K4). `valid_on` ist die eine Definition von „gilt heute“ für Team und
+  Freigaben; `valid_until` ist der erste Tag ohne Zugang, die Seite zeigt es
+  als „ohne Zugang ab“. Mitgliedschaften und Freigaben beginnen am Tag des
+  Eintragens, deshalb überlappt jede noch nicht beendete eine neue.
 - `ConsentToShare` (#23 5.2, #38): der Patient öffnet Sucht oder
   Psychotherapie für eine benannte Person. `ConsentArea` wiederholt die
   Werte von `records.Sensitivity`, weil `patients` `records` nicht kennt.
@@ -62,8 +64,9 @@ beim Ändern wissen muss.
 - Erst Rolle prüfen, dann protokollieren: Öffnen ist `view` mit
   `patient_id`, Suchen `search`. Unbekannte Patienten geben 404.
 - Wer jemanden behandelt und in welchem geschützten Bereich, ist selbst
-  klinisch: Das Behandlungsteam zeigt die Stammdatenseite nur Konten mit
-  Zugang zur Akte, Freigaben nur Ärztinnen/Ärzten. Team und Freigaben
+  klinisch: Das Behandlungsteam und den Link zur Akte zeigt die
+  Stammdatenseite nur Konten, die diese Akte sehen, Freigaben nur
+  Ärztinnen/Ärzten. Team und Freigaben
   pflegen Ärztinnen/Ärzte (#38).
 - Beim Anlegen läuft die Dublettenprüfung vor dem Speichern. Die Bestätigung
   „andere Person“ gilt nur für die angezeigten Treffer (`duplicates_seen`);

@@ -15,7 +15,7 @@
     <dt>E-Mail</dt><dd>{{ patient.email }}</dd>
   </dl>
   {% if perms.patients.change_patient %}<p><a href="{% url 'patients:edit' patient.pk %}">Stammdaten ändern</a></p>{% endif %}
-  {% if perms.records.view_chartentry %}<p><a href="{% url 'records:chart' patient.pk %}">Akte öffnen</a></p>{% endif %}
+  {% if sees_chart %}<p><a href="{% url 'records:chart' patient.pk %}">Akte öffnen</a></p>{% endif %}
 
   <h2>Kennungen</h2>
   <ul>
@@ -43,17 +43,20 @@
 
   {% if care_team is not None %}
     <h2>Behandlungsteam</h2>
-    <p><small>Ärztinnen, Ärzte und MFA sehen die Akte aller Patienten. Psychologie, Suchttherapie und Ernährung nur, solange sie hier eingetragen sind.</small></p>
+    <p><small>Ärztinnen, Ärzte und MFA sehen die Akte aller Patienten. Psychologie und Suchttherapie nur, solange sie hier eingetragen sind.</small></p>
     <ul>
       {% for member in care_team %}
         <li>
           {{ member.user.get_full_name|default:member.user.get_username }}
           seit {{ member.valid_from|date:"d.m.Y" }}
-          {% if member.valid_until %}(beendet am {{ member.valid_until|date:"d.m.Y" }})
-          {% elif perms.patients.change_careteammember %}
+          {% if not member.is_in_force %}(ausgetragen, ohne Zugang ab {{ member.valid_until|date:"d.m.Y" }})
+          {% else %}
+            {% if member.valid_until %}(ohne Zugang ab {{ member.valid_until|date:"d.m.Y" }}){% endif %}
+            {% if perms.patients.change_careteammember %}
             <form method="post" action="{% url 'patients:end_care_team' patient.pk member.pk %}" style="display:inline">
               {% csrf_token %}<button type="submit">austragen</button>
             </form>
+            {% endif %}
           {% endif %}
         </li>
       {% empty %}
@@ -78,8 +81,9 @@
           {{ consent.get_area_display }} für {{ consent.user.get_full_name|default:consent.user.get_username }}
           seit {{ consent.valid_from|date:"d.m.Y" }}, eingetragen von {{ consent.granted_by.get_username }}
           {% if consent.ended_at %}(beendet am {{ consent.ended_at|date:"d.m.Y" }} von {{ consent.ended_by.get_username }})
+          {% elif not consent.is_in_force %}(abgelaufen, ohne Wirkung ab {{ consent.valid_until|date:"d.m.Y" }})
           {% else %}
-            {% if consent.valid_until %}(bis {{ consent.valid_until|date:"d.m.Y" }}){% endif %}
+            {% if consent.valid_until %}(ohne Wirkung ab {{ consent.valid_until|date:"d.m.Y" }}){% endif %}
             {% if perms.patients.change_consenttoshare %}
               <form method="post" action="{% url 'patients:end_consent' patient.pk consent.pk %}" style="display:inline">
                 {% csrf_token %}<button type="submit">beenden</button>

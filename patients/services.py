@@ -233,7 +233,11 @@ def add_care_team_member(patient: Patient, user, *, actor) -> CareTeamMember:
         raise ValidationError("Deaktivierte Konten gehören zu keinem Behandlungsteam.")
     # Lock the patient so two parallel adds of the same account wait for each other.
     patient = Patient.objects.select_for_update().get(pk=patient.pk)
-    if CareTeamMember.objects.filter(patient=patient, user=user, valid_until=None).exists():
+    today = timezone.localdate()
+    # Memberships start the day they are added, so any not ended yet overlaps.
+    if CareTeamMember.objects.filter(
+        Q(valid_until__isnull=True) | Q(valid_until__gt=today), patient=patient, user=user
+    ).exists():
         raise ValidationError("Das Konto gehört schon zum Behandlungsteam.")
     member = CareTeamMember.objects.create(patient=patient, user=user)
     log_access(actor, "update", patient, patient_id=patient.pk)
@@ -242,9 +246,10 @@ def add_care_team_member(patient: Patient, user, *, actor) -> CareTeamMember:
 
 @transaction.atomic
 def end_care_team_member(member: CareTeamMember, *, actor, on: date | None = None):
+    """End a membership; `on` is the first day without access (default today)."""
     _require_staff(actor)
     member = CareTeamMember.objects.select_for_update().get(pk=member.pk)
-    if member.valid_until is not None:
+    if not member.is_in_force:
         raise ValidationError("Die Mitgliedschaft ist schon beendet.")
     on = on or timezone.localdate()
     if on < member.valid_from:
@@ -310,9 +315,7 @@ def end_consent(consent: ConsentToShare, *, actor) -> ConsentToShare:
     _require_staff(actor)
     consent = ConsentToShare.objects.select_for_update().get(pk=consent.pk)
     today = timezone.localdate()
-    if consent.ended_at is not None or (
-        consent.valid_until is not None and consent.valid_until <= today
-    ):
+    if consent.ended_at is not None or not consent.is_in_force:
         raise ValidationError("Die Freigabe ist schon beendet.")
     consent.valid_until = max(today, consent.valid_from)
     consent.ended_by = actor

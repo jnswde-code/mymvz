@@ -21,7 +21,6 @@ from records.models import (
     ChartEntry,
     ChartEntryType,
     Encounter,
-    Sensitivity,
     Status,
     VersionedRecord,
 )
@@ -196,7 +195,8 @@ def create_entry(
     if not access.can_write(actor, encounter.patient) or not access.can_view(actor, encounter):
         raise PermissionDenied
     if sensitivity is None:
-        sensitivity = next(iter(access.writable_sensitivities(actor)), Sensitivity.NORMAL)
+        # Not empty: `can_write` above needs at least one level.
+        sensitivity = access.writable_sensitivities(actor)[0]
     _check_sensitivity(actor, sensitivity)
     # Lock the contact, so it cannot be marked as error in between. If it was
     # corrected meanwhile, the first query finds nothing once the lock is
@@ -284,7 +284,10 @@ def mark_entered_in_error(
             encounter_lineage_id=head.lineage_id, status=Status.ACTIVE
         ).exists()
     ):
-        raise ValidationError("Erst die Einträge dieses Kontakts als Irrtum markieren.")
+        raise ValidationError(
+            "Erst die Einträge dieses Kontakts als Irrtum markieren, auch solche "
+            "mit Zugriffsbeschränkung (durch ihre Autorin oder ihren Autor)."
+        )
     successor = _successor(
         head,
         actor=actor,

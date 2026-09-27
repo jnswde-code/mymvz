@@ -188,7 +188,20 @@ def valid_on(day) -> Q:
     return Q(valid_from__lte=day) & (Q(valid_until__isnull=True) | Q(valid_until__gt=day))
 
 
-class CareTeamMember(models.Model):
+def is_on_care_team(user, patient, day=None) -> bool:
+    """The one care-team check, for `records/access.py` and the patient page."""
+    day = day or timezone.localdate()
+    return CareTeamMember.objects.filter(valid_on(day), user=user, patient=patient).exists()
+
+
+class _ValidFromUntil:
+    @property
+    def is_in_force(self) -> bool:
+        """Counts today, or will count until its end (for the patient page)."""
+        return self.valid_until is None or self.valid_until > timezone.localdate()
+
+
+class CareTeamMember(_ValidFromUntil, models.Model):
     """Someone on the care team of a patient, from/until (#23 section 5.1).
 
     The record-level checks (`records/access.py`, #38) use it: psychology,
@@ -233,7 +246,7 @@ class ConsentArea(models.TextChoices):
     PSYCHOTHERAPY = "psychotherapy", "Psychotherapie"
 
 
-class ConsentToShare(models.Model):
+class ConsentToShare(_ValidFromUntil, models.Model):
     """The patient allows a named person to see a protected area (#23 section 5.2, #38).
 
     Opens all entries of `area` of this patient to `user` from/until

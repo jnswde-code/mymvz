@@ -23,9 +23,10 @@ ROLES = {
     "nutrition": NUTRITION,
 }
 
-# Roles whose members see clinical content only for patients whose care
-# team they are on (#23 section 5.1); the patient page offers them for the team.
-CARE_TEAM_ROLES = [PSYCHOLOGY, ADDICTION_THERAPY, NUTRITION]
+# Roles whose members see the chart only for patients whose care team they
+# are on (#23 section 5.1); the patient page offers them for the team.
+# Nutrition joins once it reads something (allergies, K4).
+CARE_TEAM_ROLES = [PSYCHOLOGY, ADDICTION_THERAPY]
 
 # Permissions per group, as "app_label.codename". Only what exists today.
 # Master data: doctors, MFA and the administration read and change it, the
