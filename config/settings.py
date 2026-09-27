@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "audit",
     "practice",
     "patients",
+    "records",
     "appointments",
     "reporting",
 ]

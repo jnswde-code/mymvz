@@ -15,6 +15,7 @@
     <dt>E-Mail</dt><dd>{{ patient.email }}</dd>
   </dl>
   {% if perms.patients.change_patient %}<p><a href="{% url 'patients:edit' patient.pk %}">Stammdaten ändern</a></p>{% endif %}
+  {% if perms.records.view_chartentry %}<p><a href="{% url 'records:chart' patient.pk %}">Akte öffnen</a></p>{% endif %}
 
   <h2>Kennungen</h2>
   <ul>

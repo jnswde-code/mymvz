@@ -1,0 +1,6 @@
+{% comment %}One version of a contact or entry: `record`.{% endcomment %}
+{% if record.status == "entered_in_error" %}<strong>[Irrtum: {{ record.get_change_reason_display }}{% if record.change_reason_text %} – {{ record.change_reason_text }}{% endif %}]</strong>{% endif %}
+{% if record.entry_type %}<strong>{{ record.entry_type.code }}</strong>{% else %}<strong>{{ record.get_kind_display }}</strong>{% endif %}
+{{ record.occurred_at|date:"d.m.Y H:i" }}
+{% if record.is_late_entry %}<em>(Nachtrag)</em>{% endif %}
+{% if record.text %}<div style="white-space:pre-wrap">{{ record.text }}</div>{% endif %}

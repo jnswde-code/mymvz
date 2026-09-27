@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Akte – MyMVZ Grevenbroich{% endblock %}
+
+{% block content %}
+  {% include "records/_header.html" %}
+
+  <p>
+    {% if can_write %}<a href="{% url 'records:encounter_create' patient.pk %}">Neuer Kontakt</a>{% endif %}
+    {% if can_view_errors %}
+      {% if include_errors %}· <a href="{% url 'records:chart' patient.pk %}">Irrtümer ausblenden</a>
+      {% else %}· <a href="{% url 'records:chart' patient.pk %}?irrtuemer=1">Irrtümer zeigen (wird protokolliert)</a>{% endif %}
+    {% endif %}
+  </p>
+
+  <h2>Kontakte</h2>
+  {% for encounter in encounters %}
+    <section>
+      <h3>
+        {% with record=encounter %}{% include "records/_record.html" %}{% endwith %}
+        <small>
+          · <a href="{% url 'records:history' patient.pk 'kontakte' encounter.lineage_id %}">Verlauf{% if encounter.version > 1 %} ({{ encounter.version }} Fassungen){% endif %}</a>
+          {% if encounter.status == "active" and can_write %}· <a href="{% url 'records:entry_create' patient.pk encounter.lineage_id %}">Eintrag hinzufügen</a>{% endif %}
+          {% if encounter.lineage_id in changeable %}· <a href="{% url 'records:revise' patient.pk 'kontakte' encounter.lineage_id %}">korrigieren</a>{% endif %}
+        </small>
+      </h3>
+      <ul>
+        {% for entry in encounter.entries %}
+          <li>
+            {% with record=entry %}{% include "records/_record.html" %}{% endwith %}
+            <small>
+              {{ entry.recorded_by.get_username }}, gespeichert {{ entry.recorded_at|date:"d.m.Y H:i" }}
+              · <a href="{% url 'records:history' patient.pk 'eintraege' entry.lineage_id %}">Verlauf{% if entry.version > 1 %} ({{ entry.version }} Fassungen){% endif %}</a>
+              {% if entry.lineage_id in changeable %}· <a href="{% url 'records:revise' patient.pk 'eintraege' entry.lineage_id %}">korrigieren</a>{% endif %}
+            </small>
+          </li>
+        {% empty %}
+          <li>keine Einträge</li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% empty %}
+    <p>Noch keine Kontakte.</p>
+  {% endfor %}
+
+  {% if without_encounter %}
+    <h2>Einträge ohne sichtbaren Kontakt</h2>
+    <ul>
+      {% for entry in without_encounter %}
+        <li>
+          {% with record=entry %}{% include "records/_record.html" %}{% endwith %}
+          <small>· <a href="{% url 'records:history' patient.pk 'eintraege' entry.lineage_id %}">Verlauf</a></small>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}
