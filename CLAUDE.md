@@ -122,6 +122,10 @@ Projekt dazukommt:
   fürs Team unter `/anfragen/`
 - `tests/test_appointments_*.py`, `tests/factories.py`, `tests/conftest.py`
 
+**`telephony`**: Telefonassistent auf Seite der Website (#14)
+- `telephony/api.py`, `telephony/urls.py`: interne API für den Sprachdienst
+  unter `/intern/telefon/` (Auskunft, Terminarten, Wunschtag, Anfrage)
+
 **`reporting`**: Zählerstände ohne Personenbezug
 - `reporting/models.py`: `RequestStatistic`; `tests/test_reporting.py`
 
@@ -135,6 +139,8 @@ Projekt dazukommt:
 **`voice`**: Sprachdienst mit LiveKit Agents, eigenes Image (#13)
 - `voice/mymvz_voice/agent.py`: Worker, Agent, Weiche im `llm_node`,
   LiveKit-Einstellungen ohne Cloud
+- `voice/mymvz_voice/tools.py`, `api_client.py`: Werkzeuge des LLM über die
+  interne API von `telephony`
 - `voice/mymvz_voice/safety.py`: Wortfilter vor dem LLM;
   `handoff.py`, `texts.py`: Weiterleitung und feste Ansagen
 - `voice/mymvz_voice/providers/`: Anbieterwahl per `.env`, Attrappen in `fake.py`

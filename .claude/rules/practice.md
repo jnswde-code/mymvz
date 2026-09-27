@@ -27,3 +27,7 @@ paths:
 
 - Name, Anschrift, Telefon und Links der bestehenden Homepage, für Layout und
   Mails. Impressum und Datenschutzerklärung bleiben Sache der Praxis (#3).
+- `ACCESS` und `BLOOD_DRAW` sind die Auskunftstexte des Telefonassistenten
+  neben `OpeningHours`, vorläufig von der Homepage, bis die Praxis sie
+  bestätigt. Was hier nicht steht, weiß der Assistent nicht (#14,
+  Entscheidung 3 vom 27.09.).

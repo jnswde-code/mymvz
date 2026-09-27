@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 class ConfigError(Exception):
@@ -21,6 +21,10 @@ class Settings:
     llm_provider: str
     tts_provider: str
     language: str
+    # Internal API of the web app (#14); without a key the tools answer
+    # that nothing can be taken down right now.
+    api_url: str = ""
+    api_key: str = field(default="", repr=False)
 
 
 def _value(environ: Mapping[str, str], name: str, default: str) -> str:
@@ -40,4 +44,6 @@ def load_settings(environ: Mapping[str, str] | None = None) -> Settings:
         llm_provider=_value(environ, "VOICE_LLM_PROVIDER", "fake").lower(),
         tts_provider=_value(environ, "VOICE_TTS_PROVIDER", "fake").lower(),
         language=_value(environ, "VOICE_LANGUAGE", "de-DE"),
+        api_url=_value(environ, "VOICE_API_URL", ""),
+        api_key=_value(environ, "VOICE_API_KEY", ""),
     )

@@ -48,8 +48,11 @@ services:
     env_file: .env
     volumes:
       - ./voice:/app
+    # The internal API of `web` (VOICE_API_URL, #14); only this network
+    # reaches it, the public proxy does not forward /intern/ (#10).
     depends_on:
       - livekit
+      - web
 
 volumes:
   pgdata:

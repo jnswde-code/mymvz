@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "records",
     "appointments",
     "reporting",
+    "telephony",
 ]
 
 # Must be set before the first migration; changing it later is costly (#5, #25).
@@ -151,3 +152,7 @@ APPOINTMENTS_SUBMISSIONS_PER_HOUR = 10
 APPOINTMENTS_PRIVACY_NOTICE_VERSION = "2026-09-26"
 # Proof of work of the captcha: the client tries on average half of these.
 APPOINTMENTS_CAPTCHA_MAX_NUMBER = 300_000
+
+# Key of the internal API for the voice agent (#14 section 7). Empty: the API
+# is off (404), never open.
+VOICE_API_KEY = env_optional("VOICE_API_KEY")
