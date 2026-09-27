@@ -16,6 +16,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Max
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from appointments import mail, tokens
@@ -454,6 +455,13 @@ def _schedule(request, start, *, actor, end, resources, status):
     now = timezone.now()
     request = _lock(request)
     _require(request.status, Status.OPEN)
+    if status == AStatus.PROPOSED and not request.email:
+        # Nobody could accept; the proposal would lapse and the request
+        # reopen (#8, decision 4). The team calls and confirms instead.
+        raise ValidationError(
+            "Ohne E-Mail-Adresse kann niemand den Vorschlag annehmen. "
+            "Bitte anrufen und einen Termin bestätigen."
+        )
     appointment = _new_appointment(request, start, end, resources, status, now)
     _move(request, Status.SCHEDULED, ActorKind.STAFF, actor=actor, now=now)
     _event(request, status, ActorKind.STAFF, appointment=appointment, actor=actor, now=now)
@@ -476,15 +484,8 @@ def confirm_request(request, start, *, actor, end=None, resources=()) -> Appoint
 def propose_appointment(request, start, *, actor, end=None, resources=()) -> Appointment:
     """open → scheduled with a proposal the patient has to accept (#5, decision 4).
 
-    Not without an e-mail address: nobody could accept, the proposal would
-    lapse after its deadline and the request reopen (#8, decision 4). The
-    team calls and confirms instead.
+    Not for requests without an e-mail address (`ValidationError`).
     """
-    if not request.email:
-        raise ValidationError(
-            "Ohne E-Mail-Adresse kann niemand den Vorschlag annehmen. "
-            "Bitte anrufen und einen Termin bestätigen."
-        )
     request, appointment = _schedule(
         request, start, actor=actor, end=end, resources=resources, status=AStatus.PROPOSED
     )
@@ -591,7 +592,7 @@ def set_staff_note(request, text: str, *, actor) -> AppointmentRequest:
     request = _lock(request)
     request.staff_note = text.strip()
     request.save(update_fields=["staff_note", "updated_at"])
-    log_access(actor, "update", request)
+    log_access(actor, "update", request, patient_id=request.patient_id)
     return request
 
 
@@ -607,16 +608,17 @@ def list_requests(actor, *, status=Status.OPEN, needs_callback=False) -> list:
     """Requests for the team's list; one `list` entry in the access log, not one per row.
 
     `status=None` lists every visible status, newest first; a single status
-    lists the oldest first, as that one waits longest. `needs_callback`
+    lists the one waiting longest first, counted like `visible_since`. `needs_callback`
     keeps only requests without an e-mail address, which nobody can answer
     by mail (#8, decision 3).
     """
     _require_staff(actor)
     requests = staff_visible().select_related("appointment_type", "preferred_resource")
+    waiting = Coalesce("email_verified_at", "created_at")
     if status is not None:
-        requests = requests.filter(status=status).order_by("created_at")
+        requests = requests.filter(status=status).order_by(waiting.asc())
     else:
-        requests = requests.order_by("-created_at")
+        requests = requests.order_by(waiting.desc())
     if needs_callback:
         requests = requests.filter(email="")
     requests = list(requests.prefetch_related("time_windows"))

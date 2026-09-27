@@ -58,7 +58,8 @@ wissen muss.
   Entscheidung 4). Das Team ruft an und bestätigt.
 - „für ein Kind“ heißt unter 18 am Tag der Anzeige in Europe/Berlin, nur ein
   Hinweis für die Triage; „offen seit“ zählt Werktage ab der Bestätigung der
-  E-Mail bzw. der Anlage (#8, Entscheidungen 5 und 8).
+  E-Mail bzw. der Anlage (#8, Entscheidungen 5 und 8); die offene Liste ist
+  danach sortiert.
 - `expire_overdue_requests` und `expire_overdue_proposals` sind die Läufe des
   Systems; aufrufen soll sie der Worker aus #9.
 - Ein abgelehnter, verfallener oder zurückgezogener Vorschlag setzt die

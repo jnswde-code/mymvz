@@ -12,7 +12,7 @@
   </p>
   {% if req.flags %}<p>Hinweise: <strong>{{ req.flags|join:", " }}</strong></p>{% endif %}
   {% if not req.email %}
-    <p role="note"><strong>Keine E-Mail-Adresse:</strong> Das Ergebnis bitte telefonisch mitteilen, {{ req.phone }}.</p>
+    <p role="note"><strong>Keine E-Mail-Adresse:</strong> Es geht keine Mail hinaus. Bitte erst anrufen ({{ req.phone }}), dann hier eintragen.</p>
   {% endif %}
 
   <h2>Für Medical Office</h2>

@@ -35,7 +35,8 @@ STATUS_LABELS = {**dict(RequestStatus.choices), **dict(AppointmentStatus.choices
 
 def _annotate(request, today):
     request.flags = services.request_flags(request, today)
-    request.open_working_days = services.open_working_days(request, today)
+    if request.status == RequestStatus.OPEN:
+        request.open_working_days = services.open_working_days(request, today)
     return request
 
 
@@ -136,6 +137,7 @@ def _schedule_step(request, pk, step, done):
 
 @login_required
 @permission_required(CHANGE, raise_exception=True)
+@never_cache
 @require_POST
 def confirm_view(request, pk):
     return _schedule_step(request, pk, services.confirm_request, "Termin bestätigt.")
@@ -143,6 +145,7 @@ def confirm_view(request, pk):
 
 @login_required
 @permission_required(CHANGE, raise_exception=True)
+@never_cache
 @require_POST
 def propose_view(request, pk):
     return _schedule_step(request, pk, services.propose_appointment, "Termin vorgeschlagen.")
@@ -150,6 +153,7 @@ def propose_view(request, pk):
 
 @login_required
 @permission_required(CHANGE, raise_exception=True)
+@never_cache
 @require_POST
 def decline_view(request, pk):
     target = _target(pk)
@@ -169,6 +173,7 @@ def decline_view(request, pk):
 
 @login_required
 @permission_required(CHANGE, raise_exception=True)
+@never_cache
 @require_POST
 def note_view(request, pk):
     target = _target(pk)
