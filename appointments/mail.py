@@ -101,6 +101,7 @@ def send(kind: str, request_id, appointment_id=None) -> bool:
             "reference": request.reference,
             "appointment_start": timezone.localtime(appointment.start) if appointment else None,
             "practice": info.practice_info(None)["practice"],
+            "privacy_url": settings.SITE_BASE_URL + reverse("appointments:privacy"),
             "cancellation_notice_hours": int(
                 settings.APPOINTMENTS_CANCELLATION_NOTICE.total_seconds() // 3600
             ),
