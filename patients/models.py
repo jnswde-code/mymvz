@@ -179,12 +179,22 @@ class PatientHistory(models.Model):
         return self._display(self.new_value)
 
 
+def valid_on(day) -> Q:
+    """Care team members and consents that count on `day`.
+
+    `valid_until` is the first day without the right: ended today means no
+    access from now on, not at midnight (#38).
+    """
+    return Q(valid_from__lte=day) & (Q(valid_until__isnull=True) | Q(valid_until__gt=day))
+
+
 class CareTeamMember(models.Model):
     """Someone on the care team of a patient, from/until (#23 section 5.1).
 
-    The record-level checks of K2 use it: psychology, addiction therapy and
-    nutrition see clinical content only for patients whose team they are on.
-    Ended, not deleted, so it stays clear who was allowed when.
+    The record-level checks (`records/access.py`, #38) use it: psychology,
+    addiction therapy and nutrition see clinical content only for patients
+    whose team they are on (`valid_on`). Ended, not deleted, so it stays
+    clear who was allowed when.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -214,3 +224,63 @@ class CareTeamMember(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValueError("Mitglieder des Behandlungsteams werden beendet, nicht gelöscht.")
+
+
+class ConsentArea(models.TextChoices):
+    # The protection levels of `records.Sensitivity` a consent can open; the
+    # same values, as `patients` does not know `records` (#23 section 4).
+    ADDICTION = "addiction", "Sucht"
+    PSYCHOTHERAPY = "psychotherapy", "Psychotherapie"
+
+
+class ConsentToShare(models.Model):
+    """The patient allows a named person to see a protected area (#23 section 5.2, #38).
+
+    Opens all entries of `area` of this patient to `user` from/until
+    (`valid_on`), on top of the care team and the chart right the person
+    needs anyway. Ended, not deleted; granting and ending are logged.
+    """
+
+    Area = ConsentArea
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name="consents")
+    area = models.CharField("Bereich", max_length=16, choices=ConsentArea)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+", verbose_name="Person"
+    )
+    valid_from = models.DateField(default=timezone.localdate)
+    valid_until = models.DateField(null=True, blank=True)
+    granted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    granted_at = models.DateTimeField(default=timezone.now, editable=False)
+    ended_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["area", "valid_from"]
+        verbose_name = "Freigabe"
+        verbose_name_plural = "Freigaben"
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(area__in=ConsentArea.values), name="patients_consent_area_valid"
+            ),
+            models.UniqueConstraint(
+                fields=["patient", "area", "user"],
+                condition=Q(valid_until__isnull=True),
+                name="patients_consent_once_current",
+            ),
+            models.CheckConstraint(
+                condition=Q(valid_until__isnull=True) | Q(valid_until__gte=models.F("valid_from")),
+                name="patients_consent_until_after_from",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.area} für {self.user_id} bei {self.patient_id}"
+
+    def delete(self, *args, **kwargs):
+        raise ValueError("Freigaben werden beendet, nicht gelöscht.")

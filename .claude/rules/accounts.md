@@ -69,9 +69,11 @@ paths:
 - Rechte heute: Die Verwaltung liest das Zugriffsprotokoll. Stammdaten
   lesen, anlegen und ändern Ärztinnen/Ärzte, MFA und Verwaltung; die übrigen
   Berufe lesen sie nur (#23 Abschnitt 5.1, #26, Migration `0003`). Die
-  Karteikarte lesen und schreiben bis K2.2 nur Ärztinnen/Ärzte und MFA
-  (#37, Migration `0004`); was die Rechte bedeuten und die Prüfung je
-  Datensatz stehen in `records/access.py`, nicht hier. Terminanfragen sehen
+  Karteikarte lesen und schreiben Ärztinnen/Ärzte und MFA (#37, Migration
+  `0004`), dazu Psychologie und Suchttherapie im Behandlungsteam mit ihren
+  Schutzstufen; Team und Freigaben pflegen Ärztinnen/Ärzte (#38, Migration
+  `0006`). Was die Rechte bedeuten und die Prüfung je Datensatz stehen in
+  `records/access.py`, nicht hier. Terminanfragen sehen
   und bearbeiten nur Ärztinnen/Ärzte und MFA (#8, Migration `0005`).
 
 ## accounts/management/commands/

@@ -20,8 +20,15 @@ beim Ändern wissen muss.
   eine alte Nummer nie auf eine zweite Person zeigt. Je Patient und System
   gilt höchstens eine Nummer. Kennungen und Mitglieder des Behandlungsteams
   werden beendet (`valid_until`), nie gelöscht.
-- `CareTeamMember` braucht erst K2.2 (#38): Psychologie, Suchttherapie und Ernährung
-  sehen klinische Inhalte nur bei Patienten, in deren Team sie stehen.
+- `CareTeamMember`: Psychologie, Suchttherapie und Ernährung sehen
+  klinische Inhalte nur bei Patienten, in deren Team sie stehen (#38,
+  Prüfung in `records/access.py`). `valid_on` ist die eine Definition von
+  „gilt heute“ für Team und Freigaben; `valid_until` ist der erste Tag ohne
+  Zugang.
+- `ConsentToShare` (#23 5.2, #38): der Patient öffnet Sucht oder
+  Psychotherapie für eine benannte Person. `ConsentArea` wiederholt die
+  Werte von `records.Sensitivity`, weil `patients` `records` nicht kennt.
+  Beendet (mit wer und wann), nie gelöscht.
 - `retain_until` ist Ende des Jahres des letzten Kontakts plus zehn Jahre
   (§ 630f BGB, #23 Abschnitt 3.3), gesetzt über `services.record_contact`.
   Ein Löschlauf fehlt bewusst; er kommt mit K8 und nur nach Freigabe durch
@@ -30,10 +37,11 @@ beim Ändern wissen muss.
 
 ## patients/services.py
 
-- Außer `seed_demo` der einzige Ort, der `Patient`, `PatientIdentifier` und
-  `CareTeamMember` schreibt; Änderung, Verlauf und Protokolleintrag in einer
-  Transaktion. Rollen prüfen die Ansichten, die Funktionen verlangen nur ein angemeldetes
-  Konto, damit Backoffice (#8) und Sprachsteuerung (#16) sie ebenso nutzen.
+- Außer `seed_demo` der einzige Ort, der `Patient`, `PatientIdentifier`,
+  `CareTeamMember` und `ConsentToShare` schreibt; Änderung, Verlauf und
+  Protokolleintrag in einer Transaktion. Rollen prüfen die Ansichten, die
+  Funktionen verlangen nur ein angemeldetes Konto, damit Backoffice (#8) und
+  Sprachsteuerung (#16) sie ebenso nutzen.
 - Dublettenhinweis: gleiches Geburtsdatum und ähnlicher Name. Nachname und
   Geburtsname werden über Kreuz verglichen (Name nach Heirat), Vornamen für
   sich. Ähnlich heißt gleich nach Normalisierung (Umlaute ausgeschrieben,
@@ -45,11 +53,18 @@ beim Ändern wissen muss.
   schreibt einen Protokolleintrag mit der Trefferzahl, nie den Suchbegriff.
 - Die KVNR wird nur auf Form geprüft (Buchstabe, neun Ziffern), noch nicht
   auf die Prüfziffer.
+- Freigaben: niemand trägt eine für sich selbst ein, sonst öffnete ein
+  einzelnes Konto sich selbst einen geschützten Bereich. Die Person braucht
+  Zugang zur Akte. Eine Freigabe beginnt am Tag des Eintragens.
 
 ## patients/views.py, patients/forms.py
 
 - Erst Rolle prüfen, dann protokollieren: Öffnen ist `view` mit
   `patient_id`, Suchen `search`. Unbekannte Patienten geben 404.
+- Wer jemanden behandelt und in welchem geschützten Bereich, ist selbst
+  klinisch: Das Behandlungsteam zeigt die Stammdatenseite nur Konten mit
+  Zugang zur Akte, Freigaben nur Ärztinnen/Ärzten. Team und Freigaben
+  pflegen Ärztinnen/Ärzte (#38).
 - Beim Anlegen läuft die Dublettenprüfung vor dem Speichern. Die Bestätigung
   „andere Person“ gilt nur für die angezeigten Treffer (`duplicates_seen`);
   kommt nach einer Änderung der Eingabe ein neuer Treffer dazu, fragt die

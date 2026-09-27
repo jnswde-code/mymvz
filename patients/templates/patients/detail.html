@@ -41,9 +41,63 @@
     </form>
   {% endif %}
 
-  {% if care_team %}
+  {% if care_team is not None %}
     <h2>Behandlungsteam</h2>
-    <ul>{% for member in care_team %}<li>{{ member.user.get_username }} seit {{ member.valid_from|date:"d.m.Y" }}</li>{% endfor %}</ul>
+    <p><small>Ärztinnen, Ärzte und MFA sehen die Akte aller Patienten. Psychologie, Suchttherapie und Ernährung nur, solange sie hier eingetragen sind.</small></p>
+    <ul>
+      {% for member in care_team %}
+        <li>
+          {{ member.user.get_full_name|default:member.user.get_username }}
+          seit {{ member.valid_from|date:"d.m.Y" }}
+          {% if member.valid_until %}(beendet am {{ member.valid_until|date:"d.m.Y" }})
+          {% elif perms.patients.change_careteammember %}
+            <form method="post" action="{% url 'patients:end_care_team' patient.pk member.pk %}" style="display:inline">
+              {% csrf_token %}<button type="submit">austragen</button>
+            </form>
+          {% endif %}
+        </li>
+      {% empty %}
+        <li>niemand eingetragen</li>
+      {% endfor %}
+    </ul>
+    {% if care_team_form %}
+      <form method="post" action="{% url 'patients:add_care_team' patient.pk %}">
+        {% csrf_token %}
+        {{ care_team_form.as_p }}
+        <button type="submit">Ins Team eintragen</button>
+      </form>
+    {% endif %}
+  {% endif %}
+
+  {% if consents is not None %}
+    <h2>Freigaben geschützter Bereiche</h2>
+    <p><small>Mit Einwilligung des Patienten: öffnet Sucht oder Psychotherapie für eine benannte Person. Sie braucht weiter Zugang zur Akte und, je nach Beruf, das Behandlungsteam.</small></p>
+    <ul>
+      {% for consent in consents %}
+        <li>
+          {{ consent.get_area_display }} für {{ consent.user.get_full_name|default:consent.user.get_username }}
+          seit {{ consent.valid_from|date:"d.m.Y" }}, eingetragen von {{ consent.granted_by.get_username }}
+          {% if consent.ended_at %}(beendet am {{ consent.ended_at|date:"d.m.Y" }} von {{ consent.ended_by.get_username }})
+          {% else %}
+            {% if consent.valid_until %}(bis {{ consent.valid_until|date:"d.m.Y" }}){% endif %}
+            {% if perms.patients.change_consenttoshare %}
+              <form method="post" action="{% url 'patients:end_consent' patient.pk consent.pk %}" style="display:inline">
+                {% csrf_token %}<button type="submit">beenden</button>
+              </form>
+            {% endif %}
+          {% endif %}
+        </li>
+      {% empty %}
+        <li>keine</li>
+      {% endfor %}
+    </ul>
+    {% if consent_form %}
+      <form method="post" action="{% url 'patients:add_consent' patient.pk %}">
+        {% csrf_token %}
+        {{ consent_form.as_p }}
+        <button type="submit">Freigabe eintragen</button>
+      </form>
+    {% endif %}
   {% endif %}
 
   <h2>Verlauf der Stammdaten</h2>
