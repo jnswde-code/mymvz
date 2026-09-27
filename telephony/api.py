@@ -52,6 +52,7 @@ REQUEST_FIELDS = {
     "time_windows",
 }
 REQUIRED_FIELDS = REQUEST_FIELDS - {"contact_name", "contact_relationship", "email"}
+EMAIL_MAX_LENGTH = 254
 
 
 def internal(view):
@@ -198,7 +199,8 @@ def _request_data(data: dict) -> dict:
     result = {}
     for field, max_length in TEXT_FIELDS.items():
         value = data.get(field, "")
-        if not isinstance(value, str) or len(value.strip()) > max_length:
+        # NUL: PostgreSQL refuses it, and the answer would be 500, not 400.
+        if not isinstance(value, str) or len(value.strip()) > max_length or "\x00" in value:
             errors[field] = f"Text mit höchstens {max_length} Zeichen."
         else:
             result[field] = value.strip()
@@ -206,9 +208,13 @@ def _request_data(data: dict) -> dict:
         if field not in errors and not result[field]:
             errors[field] = "Fehlt."
 
+    type_id = data["appointment_type"]
     try:
-        result["appointment_type"] = services.active_types().get(pk=int(data["appointment_type"]))
-    except (TypeError, ValueError, OverflowError, AppointmentType.DoesNotExist):
+        # bool is an int in Python; `true` must not become id 1.
+        if not isinstance(type_id, int) or isinstance(type_id, bool):
+            raise TypeError
+        result["appointment_type"] = services.active_types().get(pk=type_id)
+    except (TypeError, OverflowError, AppointmentType.DoesNotExist):
         errors["appointment_type"] = "Diese Terminart kann nicht online angefragt werden."
     if isinstance(data["is_existing_patient"], bool):
         result["is_existing_patient"] = data["is_existing_patient"]
@@ -219,10 +225,11 @@ def _request_data(data: dict) -> dict:
     else:
         errors["insurance_type"] = f"Bitte eins von {', '.join(Insurance.values)}."
 
-    email = data.get("email") or ""
+    email = data.get("email", "")
     phone = data["phone"]
     try:
-        if not isinstance(email, str):
+        # 254: the column; validate_email alone lets 320 characters through.
+        if not isinstance(email, str) or len(email) > EMAIL_MAX_LENGTH:
             raise TypeError
         if email:
             validate_email(email)

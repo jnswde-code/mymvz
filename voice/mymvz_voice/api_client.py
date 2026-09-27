@@ -13,6 +13,9 @@ import aiohttp
 
 # A caller waits in silence meanwhile; better a clear "not now" than a pause.
 TIMEOUT_SECONDS = 5.0
+# Creating sends the mails within the same HTTP request (#7). A timeout
+# after the commit would tell the caller "failed" for a stored request.
+CREATE_TIMEOUT_SECONDS = 20.0
 
 
 class ApiUnavailable(Exception):
@@ -28,22 +31,23 @@ class ApiRejected(Exception):
 
 
 class ApiClient:
-    def __init__(self, url: str, key: str, *, timeout: float = TIMEOUT_SECONDS) -> None:
+    def __init__(self, url: str, key: str) -> None:
         self.url = url.rstrip("/") + "/" if url else ""
         self._key = key
-        self._timeout = aiohttp.ClientTimeout(total=timeout)
 
     @property
     def configured(self) -> bool:
         return bool(self.url and self._key)
 
-    async def _call(self, method: str, path: str, body: dict | None = None) -> dict[str, Any]:
+    async def _call(
+        self, method: str, path: str, body: dict | None = None, timeout=TIMEOUT_SECONDS
+    ) -> dict[str, Any]:
         if not self.configured:
             raise ApiUnavailable("VOICE_API_URL oder VOICE_API_KEY fehlt")
         headers = {"Authorization": f"Bearer {self._key}"}
         try:
             async with (
-                aiohttp.ClientSession(timeout=self._timeout) as http,
+                aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as http,
                 http.request(method, self.url + path, json=body, headers=headers) as response,
             ):
                 if response.status == 400:
@@ -56,8 +60,8 @@ class ApiClient:
         except (aiohttp.ClientError, TimeoutError, ValueError) as error:
             raise ApiUnavailable(type(error).__name__) from None
 
-    async def _field(self, method: str, path: str, name: str, body: dict | None = None) -> Any:
-        data = await self._call(method, path, body)
+    async def _field(self, method: str, path: str, name: str, body=None, **kwargs) -> Any:
+        data = await self._call(method, path, body, **kwargs)
         try:
             return data[name]
         except (KeyError, TypeError):
@@ -73,4 +77,6 @@ class ApiClient:
         return await self._call("POST", "wunschzeit/", {"date": day, "part_of_day": part_of_day})
 
     async def create_request(self, data: dict[str, Any]) -> str:
-        return await self._field("POST", "anfragen/", "reference", data)
+        return await self._field(
+            "POST", "anfragen/", "reference", data, timeout=CREATE_TIMEOUT_SECONDS
+        )

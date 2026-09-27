@@ -18,8 +18,9 @@ in der Regeldatei `voice`.
   nicht lesen kann, kann niemand aus ihm herausreden (#44).
 - Schlüssel `VOICE_API_KEY` aus `.env` als `Authorization: Bearer`,
   Vergleich mit `hmac.compare_digest`. Ohne gesetzten Schlüssel ist die API
-  aus (404), nicht offen; ohne oder mit falschem Schlüssel 403. CSRF ist
-  nur hier aus, weil kein Cookie authentisiert.
+  aus (404), nicht offen; ohne oder mit falschem Schlüssel 403. Unter 32
+  Zeichen startet Django nicht, weil Port 8000 in der Entwicklung offen
+  ist. CSRF ist nur hier aus, weil kein Cookie authentisiert.
 - Erreichbar nur im Docker-Netz: Der öffentliche Proxy (Caddy, #10) darf
   `/intern/` nicht weiterleiten. Django selbst kann das nicht prüfen, hinter
   dem Proxy kommen alle Anfragen aus dem Docker-Netz.
@@ -27,6 +28,9 @@ in der Regeldatei `voice`.
   keine Notiz am Telefon) prüft `appointments/services.py`, auch für das
   Telefon (#7). Diese Datei prüft nur Formate und lässt nur bekannte Felder
   zu; ein unbekanntes Feld wie `note` ist ein Fehler, nicht still verworfen.
+  Was die Datenbank ablehnen würde (zu lange E-Mail, NUL im Text), fängt
+  sie als 400 ab: Eine 500 hieße für den Agenten „nicht verfügbar“, und er
+  könnte nicht nachfragen.
 - Ein unpassender Wunschtag ist eine Antwort (`ok: false` mit dem Grund zum
   Vorlesen), kein Fehler; 400 nur bei kaputter Eingabe.
 - Auskunft nur aus `OpeningHours` und `practice/info.py`, als fertige Sätze

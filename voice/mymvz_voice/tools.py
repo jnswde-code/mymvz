@@ -10,6 +10,7 @@ rules for requests live there (`appointments/services.py`), not here.
 
 from __future__ import annotations
 
+import logging
 from datetime import date
 from enum import StrEnum
 
@@ -37,6 +38,10 @@ MONTHS = (
 )
 
 UNKNOWN = "Dazu liegt mir nichts vor."
+# Several people in one call are fine (e.g. two children); more looks like abuse.
+MAX_REQUESTS_PER_CALL = 3
+
+logger = logging.getLogger("mymvz_voice.tools")
 
 
 class Topic(StrEnum):
@@ -78,21 +83,26 @@ def spell(reference: str) -> str:
     return " ".join(reference.replace("-", ""))
 
 
-def _unavailable(context: RunContext) -> StopResponse:
+def _unavailable(context: RunContext, error: ApiUnavailable, tool: str) -> StopResponse:
     """Never silent when the API fails: a fixed sentence instead of a guess."""
+    # Only the reason (status or exception type), never what was sent.
+    logger.warning("interne API nicht verfügbar bei %s: %s", tool, error)
     context.session.say(texts.API_UNAVAILABLE)
     return StopResponse()
 
 
-def _rejected(error: ApiRejected) -> ToolError:
+def _rejected(error: ApiRejected, prefix: str) -> ToolError:
     messages = "; ".join(
         f"{field}: {' '.join(m if isinstance(m, str) else str(m) for m in found)}"
         for field, found in error.errors.items()
     )
-    return ToolError(f"Nicht angelegt. Bitte nachfragen und korrigieren. {messages}")
+    return ToolError(f"{prefix} Bitte nachfragen und korrigieren. {messages}")
 
 
 def phone_tools(api: ApiClient) -> list[Tool]:
+    """The tools for one call; they count the requests of this call."""
+    call = {"created": 0, "create_failed": False}
+
     @function_tool
     async def get_practice_info(context: RunContext, topic: Topic) -> str:
         """Liefert feste Auskünfte der Praxis. Nur was hier steht, darfst du sagen.
@@ -109,8 +119,8 @@ def phone_tools(api: ApiClient) -> list[Tool]:
                     return "Zurzeit kann keine Terminart angefragt werden."
                 return "Terminarten: " + "; ".join(f"id {t['id']}: {t['name']}" for t in types)
             return (await api.practice_info()).get(topic.value) or UNKNOWN
-        except ApiUnavailable:
-            raise _unavailable(context) from None
+        except ApiUnavailable as error:
+            raise _unavailable(context, error, "get_practice_info") from None
 
     @function_tool
     async def check_time_window(context: RunContext, day: str, part_of_day: PartOfDay) -> str:
@@ -122,9 +132,9 @@ def phone_tools(api: ApiClient) -> list[Tool]:
         try:
             result = await api.check_time_window(day, part_of_day.value)
         except ApiRejected as error:
-            raise _rejected(error) from None
-        except ApiUnavailable:
-            raise _unavailable(context) from None
+            raise _rejected(error, "Eingabe ungültig.") from None
+        except ApiUnavailable as error:
+            raise _unavailable(context, error, "check_time_window") from None
         if result.get("ok"):
             return "Der Wunschtag passt."
         return f"Der Wunschtag passt nicht: {result.get('reason', '')}"
@@ -153,6 +163,15 @@ def phone_tools(api: ApiClient) -> list[Tool]:
         contact_relationship nur, wenn jemand für eine andere Person anruft,
         dann beide.
         """
+        if call["create_failed"]:
+            # The request may have been stored before the failure; a second
+            # try in the same call could create it twice.
+            raise _unavailable(context, ApiUnavailable("schon gescheitert"), "create_phone_request")
+        if call["created"] >= MAX_REQUESTS_PER_CALL:
+            raise ToolError(
+                "In einem Anruf nehme ich höchstens drei Anfragen auf. "
+                "Weitere bitte später oder direkt mit dem Praxisteam."
+            )
         data = {
             "appointment_type": appointment_type_id,
             "patient_first_name": first_name,
@@ -172,9 +191,11 @@ def phone_tools(api: ApiClient) -> list[Tool]:
         try:
             reference = await api.create_request(data)
         except ApiRejected as error:
-            raise _rejected(error) from None
-        except ApiUnavailable:
-            raise _unavailable(context) from None
+            raise _rejected(error, "Nicht angelegt.") from None
+        except ApiUnavailable as error:
+            call["create_failed"] = True
+            raise _unavailable(context, error, "create_phone_request") from None
+        call["created"] += 1
         return f"Angelegt. Kennung zum Vorlesen: {spell(reference)}"
 
     return [get_practice_info, check_time_window, create_phone_request]

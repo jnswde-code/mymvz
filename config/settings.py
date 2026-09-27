@@ -3,6 +3,8 @@
 from datetime import timedelta
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 from config.env import allowed_hosts, env_bool, env_choice, env_list, env_optional, env_str
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -156,3 +158,6 @@ APPOINTMENTS_CAPTCHA_MAX_NUMBER = 300_000
 # Key of the internal API for the voice agent (#14 section 7). Empty: the API
 # is off (404), never open.
 VOICE_API_KEY = env_optional("VOICE_API_KEY")
+if 0 < len(VOICE_API_KEY) < 32:
+    # Port 8000 is published in development; a short key is guessable.
+    raise ImproperlyConfigured("VOICE_API_KEY braucht mindestens 32 Zeichen (s. .env.example)")

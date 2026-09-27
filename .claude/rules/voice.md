@@ -93,9 +93,15 @@ Anforderungen aus dem Konzept in #14, Abschnitte 3, 6 und 7.
   (#45) in dieselbe Datei.
 - Fällt die API aus (nicht konfiguriert, nicht erreichbar, 5 Sekunden ohne
   Antwort, 403/404/5xx), sagt der Agent den festen Satz
-  `texts.API_UNAVAILABLE` und beendet die Antwort; das LLM rät nie. Eine
-  abgewiesene Eingabe (400) geht als `ToolError` mit den Meldungen der API
-  an das LLM, damit es nachfragt.
+  `texts.API_UNAVAILABLE` und beendet die Antwort; das LLM rät nie. Im Log
+  steht nur der Grund (Status oder Ausnahme). Eine abgewiesene Eingabe (400)
+  geht als `ToolError` mit den Meldungen der API an das LLM, damit es
+  nachfragt.
+- Anlegen ist nicht wiederholbar: Die Mails gehen im selben HTTP-Aufruf
+  raus, ein Ausfall kann nach dem Commit kommen. Deshalb 20 Sekunden statt
+  5, und nach einem Ausfall legt das Werkzeug im selben Anruf nichts mehr
+  an. Höchstens drei Anfragen je Anruf; die Grenze je Nummer und Tag kommt
+  mit P3 (#46).
 - Die Wunschtage prüft nur die API (eine Stelle, #7). Das heutige Datum in
   Europe/Berlin steht je Anruf in der Anweisung, sonst rechnet das LLM
   „nächsten Dienstag“ falsch.
