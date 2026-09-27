@@ -1,0 +1,133 @@
+{% extends "appointments/layout.html" %}
+{% block title %}Datenschutzhinweis zur Terminanfrage{% endblock %}
+{% block content %}
+{% comment %}Draft (#11), reviewed by the practice's data protection officer
+before publishing. Describes only what the code does; keep it in step with
+appointments/forms.py, services.py (compute_delete_after), captcha.py,
+spam.py and mail.py. Marked placeholders depend on hosting and mail (#10).
+Changing the text means a new APPOINTMENTS_PRIVACY_NOTICE_VERSION.{% endcomment %}
+<h1>Datenschutzhinweis zur Terminanfrage</h1>
+<p class="help">Stand: {{ version|date:"j. F Y" }}</p>
+
+<p>Dieser Hinweis gilt für die Terminanfrage auf dieser Seite und die E-Mails dazu.
+Für die übrige Website der Praxis gilt deren <a href="{{ practice.privacy_url }}">Datenschutzerklärung</a>.</p>
+
+<h2>Verantwortlich</h2>
+<p>{{ practice.name }}, {{ practice.street }}, {{ practice.city }}, Telefon {{ practice.phone }}.
+Die vollständigen Angaben stehen im <a href="{{ practice.imprint_url }}">Impressum</a>.</p>
+<p>Datenschutzbeauftragte bzw. Datenschutzbeauftragter:
+<span class="placeholder">[offen: Name und Kontakt]</span></p>
+
+<h2>Welche Daten wir erheben</h2>
+<p>Im Formular:</p>
+<ul>
+  <li>Terminart und ob Sie schon Patientin oder Patient bei uns sind,</li>
+  <li>Art der Versicherung (gesetzlich, privat, Selbstzahler),</li>
+  <li>auf Wunsch eine bestimmte Ärztin oder einen bestimmten Arzt,</li>
+  <li>einen bis drei Wunschtage mit Tageszeit,</li>
+  <li>Vorname, Nachname und Geburtsdatum der Patientin bzw. des Patienten,</li>
+  <li>wenn Sie für eine andere Person anfragen: Ihren Namen und Ihre Beziehung zu ihr,</li>
+  <li>E-Mail-Adresse und Telefonnummer,</li>
+  <li>auf Wunsch eine kurze Notiz (höchstens 500 Zeichen).</li>
+</ul>
+<p>Dazu speichern wir eine Kennung der Anfrage, wann Sie sie gestellt und die E-Mail-Adresse
+bestätigt haben, den Verlauf (etwa „Termin vergeben“ oder „abgesagt“ mit Zeitpunkt und Grund
+aus einer festen Liste), welchen Stand dieses Hinweises Sie gesehen haben, und später den
+Termin selbst. Von den Links in unseren E-Mails speichern wir nur einen Prüfwert, nicht den
+Link.</p>
+<p>Wir fragen nicht nach Anschrift, Versichertennummer oder Befunden, und Sie können keine
+Dateien hochladen. Schon die Terminart kann eine Angabe zu Ihrer Gesundheit sein, ebenso die
+Notiz. Wir behandeln deshalb die ganze Anfrage als Gesundheitsdaten.</p>
+
+<h2>Wozu</h2>
+<p>Wir verwenden die Angaben nur, um mit Ihnen einen Termin zu vereinbaren: um die Anfrage zu
+planen, Sie bei Rückfragen zu erreichen und Ihnen den Termin, einen anderen Vorschlag oder eine
+Absage mitzuteilen. Name und Geburtsdatum brauchen wir, um Verwechslungen zu vermeiden.</p>
+<p>Die Wunsch-Ärztin bzw. den Wunsch-Arzt, den zweiten und dritten Wunschtag und die Notiz
+können Sie weglassen. Ohne die übrigen Angaben können
+wir eine Anfrage über die Website nicht bearbeiten; Sie erreichen uns dann telefonisch unter
+{{ practice.phone }}.</p>
+
+<h2>Rechtsgrundlage</h2>
+<ul>
+  <li>Terminvereinbarung als Schritt vor einem Behandlungsvertrag: Art. 6 Abs. 1 lit. b DSGVO.</li>
+  <li>Gesundheitsdaten: Art. 9 Abs. 2 lit. h DSGVO in Verbindung mit § 22 Abs. 1 Nr. 1 lit. b BDSG.</li>
+  <li>Schutz des Formulars vor Missbrauch (unten): Art. 6 Abs. 1 lit. f DSGVO, unser berechtigtes
+    Interesse an einem Formular, das nicht mit Spam überflutet wird.</li>
+  <li>Das Cookie des Formulars ist technisch notwendig: § 25 Abs. 2 Nr. 2 TDDDG.</li>
+</ul>
+
+<h2>Schutz vor Missbrauch</h2>
+<ul>
+  <li><strong>Begrenzung der Anfragen:</strong> Wie oft von einer Internetadresse (IP-Adresse)
+    aus das Formular abgeschickt wird, zählen wir eine Stunde lang im Arbeitsspeicher des
+    Servers, und zwar nur über einen Prüfwert, den der Server mit einem geheimen Schlüssel aus
+    der Adresse bildet. In der Datenbank
+    speichern wir keine IP-Adresse.</li>
+  <li><strong>Prüfaufgabe statt Captcha eines Anbieters:</strong> Ihr Browser löst beim Laden
+    des Formulars eine kleine Rechenaufgabe, die unser Server gestellt hat. Dafür braucht das
+    Formular JavaScript. Kein anderer Anbieter ist beteiligt, und die Aufgabe enthält keine
+    Angaben über Sie.</li>
+</ul>
+
+<h2>Cookies und eingebundene Dienste</h2>
+<p>Das Formular setzt ein einziges Cookie, <code>csrftoken</code>. Es schützt davor, dass eine
+fremde Seite in Ihrem Namen Anfragen abschickt, und gilt {{ csrf_cookie_days }} Tage. Es gibt keine
+Cookies zur Analyse oder Werbung, keine Besucherstatistik und keine Inhalte anderer Anbieter wie
+Schriften, Karten oder Videos. Deshalb fragen wir auch nicht nach einer Einwilligung.</p>
+<p>Protokolle des Webservers: <span class="placeholder">[offen, hängt am Hosting: welche Angaben,
+IP-Adresse gekürzt, Löschung nach 7 Tagen]</span></p>
+
+<h2>Wer die Daten sieht</h2>
+<ul>
+  <li>Das Praxisteam, jede und jeder mit eigenem Konto und zweitem Faktor bei der Anmeldung.
+    Wer eine Anfrage ansieht oder ändert, wird protokolliert.</li>
+  <li>Die Praxis erfährt per E-Mail nur, dass eine neue Anfrage eingegangen oder ein Termin
+    abgesagt worden ist, ohne Inhalt.</li>
+  <li>E-Mails an Sie enthalten nur Datum, Uhrzeit, Anschrift der Praxis, die Kennung der Anfrage
+    und Links, nie die Terminart, Ihre Notiz, die Ärztin oder den Arzt oder Ihren Namen. E-Mails
+    sind nicht Ende-zu-Ende verschlüsselt; schicken Sie uns deshalb bitte keine Befunde per
+    E-Mail.</li>
+  <li>Kommt ein Termin zustande, überträgt das Praxisteam ihn in die Praxisverwaltung. Dort gelten
+    die Regeln der Behandlungsdokumentation, auch für die Aufbewahrung (§ 630f BGB).</li>
+  <li>Dienstleister, die wir vertraglich zur Verarbeitung nur nach unserer Weisung und zur
+    Verschwiegenheit verpflichtet haben (Auftragsverarbeitung, Art. 28 DSGVO, § 203 StGB):
+    <ul>
+      <li>Betrieb des Servers: <span class="placeholder">[offen: Anbieter, Standort Deutschland]</span></li>
+      <li>Versand der E-Mails: <span class="placeholder">[offen: Anbieter, Standort EU]</span></li>
+    </ul>
+  </li>
+</ul>
+<p>Wir übermitteln keine Daten in Länder außerhalb der EU und des EWR.
+<span class="placeholder">[mit den Anbietern oben bestätigen]</span></p>
+
+<h2>Wie lange</h2>
+<ul>
+  <li>Anfragen, deren E-Mail-Adresse nicht bestätigt wird: {{ verify_hours }} Stunden nach dem Absenden.</li>
+  <li>Offene Anfragen bleiben, bis wir antworten oder alle Wunschtage vorbei sind. Einen
+    Terminvorschlag können Sie {{ proposal_working_days }} Werktage lang annehmen, längstens bis zum
+    vorgeschlagenen Termin.</li>
+  <li>Abgelehnte, zurückgezogene und verfallene Anfragen: {{ retention_days }} Tage danach.</li>
+  <li>Vereinbarte Termine: {{ retention_days }} Tage nach dem Termin, abgesagte {{ retention_days }} Tage
+    nach der Absage.</li>
+</ul>
+<p>Danach löschen wir die Anfrage mit allen Angaben, dem Verlauf und dem Termin. Das Protokoll
+der Zugriffe enthält nur Art und Kennnummer des Eintrags, keine Namen und keine Inhalte.</p>
+<p>Sicherungen: <span class="placeholder">[offen, hängt am Hosting: verschlüsselte Sicherung, 30 Tage
+rollierend; gelöschte Daten verschwinden dort erst mit der ältesten Sicherung]</span></p>
+
+<h2>Keine automatische Entscheidung</h2>
+<p>Über Ihre Anfrage entscheidet das Praxisteam. Es gibt keine automatisierte Entscheidung und
+kein Profiling.</p>
+
+<h2>Ihre Rechte</h2>
+<p>Sie haben das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17),
+Einschränkung der Verarbeitung (Art. 18) und Datenübertragbarkeit (Art. 20). Der Verarbeitung
+zum Schutz vor Missbrauch können Sie widersprechen (Art. 21). Eine offene Anfrage können Sie
+jederzeit über den Link in der Eingangsbestätigung zurückziehen, einen Termin über den Link in
+der Terminbestätigung oder telefonisch absagen. Wenden Sie sich dafür an uns unter
+{{ practice.phone }} oder an die bzw. den Datenschutzbeauftragten.</p>
+<p>Sie können sich bei einer Aufsichtsbehörde beschweren, für uns zuständig ist die
+Landesbeauftragte für Datenschutz und Informationsfreiheit Nordrhein-Westfalen,
+Kavalleriestraße 2–4, 40213 Düsseldorf.</p>
+{% endblock %}

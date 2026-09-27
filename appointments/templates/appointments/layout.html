@@ -35,6 +35,8 @@
     .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
     footer { border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
     footer a { margin-right: 1rem; }
+    h2 { font-size: 1.15rem; margin-top: 1.75rem; }
+    .placeholder { background: #fff3a8; }
   </style>
 </head>
 <body>
@@ -53,7 +55,7 @@
   <footer>
     <a href="{{ practice.homepage_url }}">Startseite</a>
     <a href="{{ practice.imprint_url }}">Impressum</a>
-    <a href="{{ practice.privacy_url }}">Datenschutz</a>
+    <a href="{% url 'appointments:privacy' %}">Datenschutz</a>
   </footer>
 </body>
 </html>
